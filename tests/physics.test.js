@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createVessel,stepVessel,canDock,applyBoundary,waveHeight} from '../src/physics.js';
+import {ships,regions} from '../src/data.js';
+const env={wind:7,river:false};
+test('선종별 가속과 최고 속력이 다르고 과속하지 않는다',()=>{for(const ship of ships){const s=createVessel();s.throttle=1;for(let i=0;i<10000;i++)stepVessel(s,ship,env,.05,{});assert(s.speed>4);assert(s.speed<=ship.maxSpeed*.5144*1.25);assert(s.distance>0);}});
+test('닻은 전진을 멈추고 정박 위치를 유지한다',()=>{const s=createVessel();s.speed=8;s.anchored=true;for(let i=0;i<200;i++)stepVessel(s,ships[1],env,.05,{});assert.equal(s.x,0);assert.equal(s.z,100);assert(s.speed<.01);});
+test('운송 정산은 목적지와 저속 조건을 모두 요구한다',()=>{const s=createVessel(),p={x:0,z:100};assert(canDock(s,p));s.speed=3;assert(!canDock(s,p));s.speed=0;p.x=1000;assert(!canDock(s,p));});
+test('해안 충돌과 강의 양안을 통과하지 않는다',()=>{let s=createVessel();s.x=290;assert(applyBoundary(s,regions[4],[]));assert.equal(s.x,285);s={...createVessel(),x:20,z:0,speed:4};assert(applyBoundary(s,regions[0],[{x:0,z:0,radius:30}]));assert(s.x>40);assert(s.speed<0);});
+test('파도는 시간과 풍속에 따라 변한다',()=>{assert.equal(waveHeight(0,0,0,0),0);assert.notEqual(waveHeight(10,10,1),waveHeight(10,10,2));});
+test('입력 프레임이 길어져도 물리는 제한된 시간만 전진한다',()=>{const a=createVessel(),b=createVessel();a.throttle=b.throttle=1;stepVessel(a,ships[0],env,10,{steer:1});stepVessel(b,ships[0],env,.05,{steer:1});assert.deepEqual(a,b);});

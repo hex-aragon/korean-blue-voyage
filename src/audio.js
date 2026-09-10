@@ -1,0 +1,10 @@
+export class SeaAudio{
+ constructor(){this.active=false;this.volume=.45;}
+ async toggle(){if(!this.ctx)this.init();await this.ctx.resume();this.active=!this.active;this.master.gain.setTargetAtTime(this.active?this.volume:0,this.ctx.currentTime,.3);return this.active;}
+ init(){const ctx=this.ctx=new AudioContext();this.master=ctx.createGain();this.master.gain.value=0;this.master.connect(ctx.destination);const buffer=ctx.createBuffer(1,ctx.sampleRate*6,ctx.sampleRate);const data=buffer.getChannelData(0);let brown=0;for(let i=0;i<data.length;i++){brown=(brown+.03*(Math.random()*2-1))/1.03;data[i]=brown*4;}
+ const noise=ctx.createBufferSource();noise.buffer=buffer;noise.loop=true;this.filter=ctx.createBiquadFilter();this.filter.type='lowpass';this.filter.frequency.value=650;this.surf=ctx.createGain();this.surf.gain.value=.45;noise.connect(this.filter).connect(this.surf).connect(this.master);noise.start();
+ const windNoise=ctx.createBufferSource();windNoise.buffer=buffer;windNoise.loop=true;this.wind=ctx.createBiquadFilter();this.wind.type='bandpass';this.wind.frequency.value=1400;this.wind.Q.value=.4;const wg=ctx.createGain();wg.gain.value=.3;windNoise.connect(this.wind).connect(wg).connect(this.master);windNoise.start();
+ this.engine=ctx.createOscillator();this.engine.type='sine';this.engine.frequency.value=45;this.engineGain=ctx.createGain();this.engineGain.gain.value=0;this.engine.connect(this.engineGain).connect(this.master);this.engine.start();}
+ update(t,speed,wind,yacht){if(!this.ctx)return;this.surf.gain.setTargetAtTime(.3+.12*Math.sin(t*.45)+wind*.015,this.ctx.currentTime,.2);this.filter.frequency.setTargetAtTime(500+Math.sin(t*.4)*170+wind*20,this.ctx.currentTime,.2);this.engine.frequency.setTargetAtTime(35+Math.abs(speed)*5,this.ctx.currentTime,.2);this.engineGain.gain.setTargetAtTime(yacht?0:Math.min(.16,Math.abs(speed)*.018),this.ctx.currentTime,.2);}
+ setVolume(v){this.volume=v;if(this.ctx)this.master.gain.setTargetAtTime(this.active?v:0,this.ctx.currentTime,.1);}
+}
