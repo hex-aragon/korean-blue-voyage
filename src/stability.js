@@ -3,7 +3,7 @@ import {clamp,waveHeight} from './physics.js';
 export const BAY_NAMES=['선수 좌현','선수 우현','중앙 좌현','중앙 우현','선미 좌현','선미 우현'];
 export const emptyCargo=()=>({bays:[0,0,0,0,0,0],high:false,ballast:false});
 export const cargoUnits=c=>c.bays.reduce((a,b)=>a+b,0);
-export const liquidShip=s=>s.id==='tanker'||s.id==='chemical';
+export const liquidShip=s=>['tanker','chemical','lng'].includes(s.kind||s.id);
 export function cargoPreset(id){return {bays:id==='list'?[3,0,3,0,3,0]:[2,2,2,2,2,2],high:id==='high',ballast:false};}
 export function stability(ship,cargo){
  const base=ship.mass*100,unit=base*.08,ballast=cargo.ballast?base*.32:0;

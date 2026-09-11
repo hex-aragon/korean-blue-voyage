@@ -17,7 +17,7 @@ export function makeOfficer(){
 }
 export function makeBridge(spec){
  const g=new THREE.Group(),yacht=spec.id==='yacht';
- const width=yacht?3.3:spec.beam*.74,base=yacht?3:8.3,z=yacht?4:spec.length*.33;
+ const width=yacht?3.3:spec.beam*.74,base=spec.bridgeY,z=spec.bridgeZ*spec.length;
  g.position.set(0,base,z);g.name='walk-in-bridge';
  box(g,0,-.12,.2,width,.18,yacht?3:5,0x7a7463);
  if(!yacht){
