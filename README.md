@@ -180,3 +180,5 @@ The damage card offers free repeated repair (+8 condition per press while stoppe
 Blender MCP에서 직접 제작한 거주구 GLB로 컨테이너·벌크·탱커 계열을 개선했다. 난간, 계단, 수밀문, 밀폐형 구명정, 대빗, 안테나와 금속·도장·유리 재질을 추가한다. 모델은 로딩 완료 시 교체되며 실패하면 기존 그래픽을 유지한다.
 
 교육과정 원자료·문항 범위·게임 기준·모델 제작 기록: [CURRICULUM_VOYAGE_REFERENCES.md](CURRICULUM_VOYAGE_REFERENCES.md). Higgsfield 연결은 미완료로, 현재 배포에는 Blender 제작 모델만 적용했다.
+
+v1.15.2는 항해 시간 문제를 실제 하역 목적지 구간 기준으로 보정하고, 자동 항해 중 NPC와 서로 기다리며 멈추는 경우를 개선한다. 상세 검증은 `node tests/training-check.mjs`, 모델·모바일·타각 검증은 `node tests/blender-training-check.mjs`로 실행한다.

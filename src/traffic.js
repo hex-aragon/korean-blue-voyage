@@ -44,15 +44,21 @@ export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of wor
  c.depth=Math.min(0,Math.sin(world.time*.16+(c.id==='whale-2'?2:0))*9);c.visible=c.depth>-3;
  }else if(c.rx){
   const tangent=Math.hypot(c.rx*Math.sin(c.phase),c.rz*Math.cos(c.phase));
-  const candidate=routePoint(c,c.phase+c.direction*c.cruise*dt/tangent);
+  if(c.yielding&&(!own||Math.hypot(c.x-own.x,c.z-own.z)>c.radius+260))c.yielding=false;
+  const velocity=c.yielding?-Math.min(2.5,c.cruise*.45):c.cruise;
+  const candidate=routePoint(c,c.phase+c.direction*velocity*dt/tangent);
   // Game-only anti-overlap courtesy stop; not a legal stand-on/give-way decision.
-  const nextPhase=c.phase+c.direction*c.cruise*dt/tangent,nextHeading=Math.atan2(-Math.sin(nextPhase)*c.rx*c.direction,-Math.cos(nextPhase)*c.rz*c.direction);
+  const nextPhase=c.phase+c.direction*velocity*dt/tangent,nextHeading=Math.atan2(-Math.sin(nextPhase)*c.rx*c.direction,-Math.cos(nextPhase)*c.rz*c.direction);
   const ownDistance=own?(c.kind==='towing'?pointSegmentDistance(own,candidate,towEnd({...candidate,heading:nextHeading})):Math.hypot(candidate.x-own.x,candidate.z-own.z)):Infinity;
   const currentOwnDistance=own?(c.kind==='towing'?pointSegmentDistance(own,c,towEnd(c)):Math.hypot(c.x-own.x,c.z-own.z)):Infinity;
-  const blocked=own&&(own.assisted||Math.abs(own.speed||0)<.6)&&ownDistance<c.radius+(own.assisted?220:85)&&ownDistance<currentOwnDistance;
+  const blocked=!c.yielding&&own&&(own.assisted||Math.abs(own.speed||0)<.6)&&ownDistance<c.radius+(own.assisted?220:85)&&ownDistance<currentOwnDistance;
   const other=world.contacts.some(p=>p!==c&&!['whale','shark'].includes(p.kind)&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<c.radius+p.radius+15&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<Math.hypot(c.x-p.x,c.z-p.z));
-  if(!blocked&&!other){c.phase+=c.direction*c.cruise*dt/tangent;Object.assign(c,candidate);c.heading=Math.atan2(-Math.sin(c.phase)*c.rx*c.direction,-Math.cos(c.phase)*c.rz*c.direction);}
-  c.speed=blocked||other?0:c.cruise;
+  // Break game courtesy deadlocks by moving astern along the already validated loop.
+  // Bow heading is retained; this is not a COLREG manoeuvre model. Tows never use it.
+  c.waitingOwn=blocked&&own?.assisted&&Math.abs(own.speed||0)<.6?(c.waitingOwn||0)+dt:0;
+  if(c.waitingOwn>4&&c.kind!=='towing'&&!['whale','shark'].includes(c.kind))c.yielding=true;
+  if(!blocked&&!other){c.phase+=c.direction*velocity*dt/tangent;Object.assign(c,candidate);c.heading=Math.atan2(-Math.sin(c.phase)*c.rx*c.direction,-Math.cos(c.phase)*c.rz*c.direction);}
+  c.speed=blocked||other?0:velocity;
   if(c.local&&['whale','shark'].includes(c.kind)){c.depth=c.kind==='shark'?-.35:-.25-Math.max(0,Math.sin(world.time*.11+c.cx))*.7;c.visible=true;}
  }
  if(c.kind!=='whale'&&(!c.trail?.length||world.time-c.trail[c.trail.length-1].time>=3)){(c.trail??=[]).push({x:c.x,z:c.z,time:world.time});if(c.trail.length>40)c.trail.shift();}
