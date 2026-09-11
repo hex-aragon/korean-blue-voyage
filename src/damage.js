@@ -18,7 +18,7 @@ export function stepRescue(c,dt){
 
 // Game assistance only: relocation is not a real refloating procedure.
 export function recoveryPose(s,ship,obstacles,ground,contacts=[],river=false){
- const margin=Math.max(24,ship.length*.55),corridor=260;
+ const margin=Math.max(65,ship.length*.55),corridor=260;
  const water=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&Math.hypot(x,z)<8700&&(!river||Math.abs(x)<260)&&ground(x,z)<-1;
  function safe(p,h){
   const end={x:p.x+Math.sin(h)*corridor,z:p.z-Math.cos(h)*corridor};

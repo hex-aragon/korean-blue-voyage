@@ -172,3 +172,11 @@ The damage card offers free repeated repair (+8 condition per press while stoppe
 메뉴 → **해기사 학습 항해**에서 4~1급을 선택한다. 해사영어·선화운송·선박운용·사고 대응 16개 창작 문제와 조타·감속·레이더·GM 비교 실습, 최초 완료 XP 및 저장 기능을 제공한다. 급수별 난이도는 자체 구성이고 공식 기출·전 범위 시험 대비는 아니다. 분석과 공식 참고 문서는 [MARITIME_ACADEMY_REFERENCES.md](MARITIME_ACADEMY_REFERENCES.md)를 참고한다.
 
 검증: `npm test`, `npm run build`, `node tests/damage-check.mjs`, `node tests/academy-check.mjs`, `node tests/voyage-check.mjs`.
+
+### v1.15 — Blender 상세 선박 · 승선 실습 항차
+
+첫 화면의 **승선 실습 항차 · 배우며 항해**, 또는 메뉴 → **승선 실습 항차**에서 시작한다. 현재 거리로 시간 계산 → 실제 적재 GM 계산 → 타각 명령 실행 → 연속 레이더 추적 → 전역 기상 변화에 감속 대응 → 목적지 인도의 6단계를 플레이한다. 오답은 마지막에 재확인하고 항차 경험치와 복기 기록을 저장한다. 개념 정답만으로 실습이 완료되지 않는다.
+
+Blender MCP에서 직접 제작한 거주구 GLB로 컨테이너·벌크·탱커 계열을 개선했다. 난간, 계단, 수밀문, 밀폐형 구명정, 대빗, 안테나와 금속·도장·유리 재질을 추가한다. 모델은 로딩 완료 시 교체되며 실패하면 기존 그래픽을 유지한다.
+
+교육과정 원자료·문항 범위·게임 기준·모델 제작 기록: [CURRICULUM_VOYAGE_REFERENCES.md](CURRICULUM_VOYAGE_REFERENCES.md). Higgsfield 연결은 미완료로, 현재 배포에는 Blender 제작 모델만 적용했다.
