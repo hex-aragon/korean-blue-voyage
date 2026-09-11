@@ -88,7 +88,8 @@ export class OceanScene{
  ship.updateMatrixWorld(true);desired=this.bridge.eye.getWorldPosition(new THREE.Vector3());this.camera.position.copy(desired);
  const world=ship.getWorldQuaternion(new THREE.Quaternion());const look=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.035+this.lookPitch,-this.orbit,0,'YXZ'));
  this.camera.quaternion.copy(world.multiply(look));this.camera.fov=innerWidth<650?78:68;
- }else{const d=(L*.9+14)*this.zoom*(innerWidth<650?1.18:1);desired=new THREE.Vector3(s.x-Math.sin(angle)*d,h+d*.42+this.spec.bridgeY*.24,s.z+Math.cos(angle)*d);this.camera.position.lerp(desired,this.cameraSnap?1:1-Math.exp(-dt*5));this.camera.up.set(0,1,0);this.camera.lookAt(s.x,this.spec.bridgeY*.43,s.z-L*.02);this.camera.fov=55;}
+ }else{const d=(L*.9+14)*this.zoom*(innerWidth<650?1.23:1.12);desired=new THREE.Vector3(s.x-Math.sin(angle)*d,h+d*.42+this.spec.bridgeY*.24,s.z+Math.cos(angle)*d);this.camera.position.lerp(desired,this.cameraSnap?1:1-Math.exp(-dt*5));this.camera.up.set(0,1,0);this.camera.lookAt(s.x,this.spec.bridgeY*.43,s.z-L*.02);this.camera.fov=55;}
+ if(this.cameraMode===0)this.camera.setViewOffset(innerWidth,innerHeight,innerHeight<520&&innerWidth>innerHeight?innerWidth*.18:0,innerHeight*.1,innerWidth,innerHeight);else this.camera.clearViewOffset();
  this.camera.updateProjectionMatrix();this.cameraSnap=false;
 
  this.renderer.render(this.scene,this.camera);
