@@ -92,7 +92,7 @@ export class OceanScene{
  const ring=new THREE.Mesh(new THREE.TorusGeometry(58,.65,6,72),new THREE.MeshBasicMaterial({color:0xa2ded1,transparent:true,opacity:.7}));ring.rotation.x=Math.PI/2;ring.position.set(p.x,1.2,p.z);ring.userData.privateMaterial=true;this.land.add(ring);this.portMeshes.push(ring);
  });this.ports=ports;this.setupTraffic(region);return ports;
  }
- setupTraffic(region){this.world=createTraffic(region,this.obstacles);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));}
+ setupTraffic(region){const raw=new URLSearchParams(location.search).get('trafficSeed'),seed=raw!==null&&/^\d+$/.test(raw)&&Number(raw)<=4294967295?Number(raw):undefined;this.world=createTraffic(region,this.obstacles,seed);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));}
  update(s,t,dt,strength,cargo,handling=null){
  this.sky.material.uniforms.cloudTime.value=t;this.scene.backgroundRotation.y=t*.00008;this.living.update(this.world,t,strength);
  this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;
