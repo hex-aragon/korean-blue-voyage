@@ -90,7 +90,14 @@ export function updateVesselDetails(ship,spec,t,handling){if(ship.userData.ramp)
 export function disposeVessel(g){g.userData.disposed=true;g.traverse(o=>{o.geometry?.dispose();if(o.userData.privateMaterial)o.material?.dispose();o.userData.ownedTexture?.dispose();});g.clear();}
 
 function jetSki(g,p,s){
-// Smooth composite body, saddle, handlebars, and a seated rider in a buoyancy vest.
-p.sphere(0,.12,0,1,0x183d50,[.7,.36,1.8]);p.sphere(0,.38,-.2,1,s.color,[.64,.25,1.48]);p.round(0,.59,.35,.52,.25,1.4,0x24313d);p.sphere(0,.66,-.7,1,0xf0f5ed,[.45,.27,.55]);p.beam([0,.7,-.7],[0,1.04,-.5],.065,0x465a66);p.beam([-.47,1.04,-.5],[.47,1.04,-.5],.045,0x172733);
-p.sphere(0,1.14,.18,1,0xf1a649,[.27,.39,.2]);p.sphere(0,1.66,.08,.22,0xf2c29e);p.sphere(0,1.79,.09,1,0xeff7f1,[.24,.14,.24]);for(const side of [-1,1]){p.beam([side*.22,1.35,.1],[side*.4,1.05,-.48],.085,0x263844);p.beam([side*.14,.94,.28],[side*.43,.65,.03],.115,0x253441);p.beam([side*.43,.65,.03],[side*.47,.34,.6],.09,0x253441);}p.finish();g.userData.height=2;return g;
+const mat=(color,roughness=.35,metalness=.1)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+const black=mat(0x112333,.63),shell=mat(0x10aebf,.2,.35),white=mat(0xe7f1ee,.28),skin=mat(0xd7a484,.7);
+const ell=(parent,x,y,z,sx,sy,sz,m)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;parent.add(mesh);return mesh;};
+const tube=(parent,a,b,r,m)=>{const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),mesh=new THREE.Mesh(new THREE.CapsuleGeometry(r,start.distanceTo(end),8,20),m);mesh.position.copy(start.clone().add(end).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),end.sub(start).normalize());mesh.castShadow=true;parent.add(mesh);};
+ell(g,0,.10,0,.72,.32,1.8,black);ell(g,0,.34,-.22,.65,.26,1.52,shell);ell(g,0,.48,-.6,.52,.25,.92,white);ell(g,0,.65,.38,.29,.17,.85,black);ell(g,0,.68,-.75,.38,.22,.5,shell);
+for(const side of [-1,1]){tube(g,[side*.58,.32,-.85],[side*.62,.31,1.2],.055,black);for(let i=0;i<7;i++)tube(g,[side*.35,.40,.15+i*.13],[side*.58,.39,.15+i*.13],.018,black);tube(g,[side*.36,.65,-1.02],[side*.48,.49,-.48],.025,mat(0x253746));}
+tube(g,[0,.7,-.64],[0,1.0,-.47],.055,black);tube(g,[-.43,1.02,-.47],[.43,1.02,-.47],.04,black);ell(g,0,.92,-.64,.14,.07,.12,mat(0x122c3d,.15));
+const rider=new THREE.Group();rider.name='sport-rider';g.add(rider);const suit=mat(0x163b50,.78),vest=mat(0xee9142,.65),helmet=mat(0xf1f5eb,.23),visor=mat(0x143448,.13,.65);
+ell(rider,0,1.16,.23,.245,.35,.18,suit);ell(rider,0,1.19,.22,.265,.3,.195,vest);for(const y of [1.03,1.28])tube(rider,[-.22,y,.4],[.22,y,.4],.025,black);tube(rider,[-.14,1.36,.32],[-.14,.99,.4],.025,black);tube(rider,[.14,1.36,.32],[.14,.99,.4],.025,black);
+ell(rider,0,1.51,.08,.10,.13,.1,skin);ell(rider,0,1.72,.02,.235,.27,.25,helmet);ell(rider,0,1.72,-.175,.20,.115,.11,visor);ell(rider,0,1.57,-.13,.19,.07,.18,helmet);for(const side of [-1,1]){tube(rider,[side*.22,1.36,.13],[side*.34,1.13,-.10],.085,suit);tube(rider,[side*.34,1.13,-.1],[side*.40,1.02,-.47],.067,suit);ell(rider,side*.40,1.02,-.47,.085,.07,.1,black);tube(rider,[side*.14,.99,.35],[side*.39,.73,.02],.11,suit);tube(rider,[side*.39,.73,.02],[side*.49,.40,.52],.083,suit);ell(rider,side*.49,.40,.61,.11,.095,.23,black);ell(rider,side*.39,.74,.01,.125,.13,.1,black);}g.userData.height=2;return g;
 }
