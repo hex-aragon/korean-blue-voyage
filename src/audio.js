@@ -14,12 +14,12 @@ export class SeaAudio{
  setMusicVolume(value){this.musicVolume=Math.max(0,Math.min(1,value));this.setMusic(this.musicEnabled);}
  setAmbientHorns(enabled){this.ambientHorns=enabled;if(this.ctx)this.nextHorn=this.ctx.currentTime+12;}
 
- update(t,speed,wind,yacht,throttle=0,ambience=true){if(!this.ctx)return;const now=this.ctx.currentTime,velocity=Math.abs(speed),pace=Math.min(1,velocity/15),rpm=Math.min(1,Math.abs(throttle)*.6+pace*.4);
+ update(t,speed,wind,yacht,throttle=0,ambience=true,waterImpact=0){if(!this.ctx)return;const now=this.ctx.currentTime,velocity=Math.abs(speed),pace=Math.min(1,velocity/15),rpm=Math.min(1,Math.abs(throttle)*.6+pace*.4);
  const chords=[[130.81,164.81,196,293.66],[87.31,130.81,164.81,220],[110,164.81,196,261.63],[98,146.83,196,220]],chord=Math.floor(now/18)%4;if(chord!==this.chord){this.chord=chord;this.pad.forEach((voice,i)=>voice.frequency.setTargetAtTime(chords[chord][i],now,1.8));}
  if(this.active&&ambience&&this.ambientHorns&&now>=this.nextHorn){this.playHorn(65.41+(chord%2)*16.99,true,chord%2?.65:-.65);this.nextHorn=now+48+chord*7;}else if(!ambience||!this.active)this.nextHorn=Math.max(this.nextHorn,now+8);
  const duck=now<(this.duckUntil||0)?.32:1;this.music.gain.setTargetAtTime(this.musicEnabled?this.musicVolume*duck:0,now,.12);
- this.surf.gain.setTargetAtTime((.27+.1*Math.sin(t*.45)+wind*.012+pace*.22)*duck,now,.3);
- this.filter.frequency.setTargetAtTime(500+Math.sin(t*.4)*120+wind*20+pace*1100,now,.3);
+ this.surf.gain.setTargetAtTime((.27+.1*Math.sin(t*.45)+wind*.012+pace*.22+(ambience?Math.min(1,waterImpact)*.13:0))*duck,now,.3);
+ this.filter.frequency.setTargetAtTime(500+Math.sin(t*.4)*120+wind*20+pace*1100+(ambience?Math.min(1,waterImpact)*650:0),now,.3);
  this.wind.frequency.setTargetAtTime(900+wind*35+pace*1900,now,.4);this.windGain.gain.setTargetAtTime((.15+wind*.009+pace*.3)*duck,now,.4);
  this.engine.frequency.setTargetAtTime(32+rpm*68,now,.25);this.engineGain.gain.setTargetAtTime(yacht?0:Math.min(.22,rpm*.22)*duck,now,.25);
  this.harmonic.frequency.setTargetAtTime(64+rpm*136,now,.25);this.harmonicGain.gain.setTargetAtTime(yacht?0:rpm*.06*duck,now,.25);}

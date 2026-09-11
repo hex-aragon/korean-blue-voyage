@@ -132,3 +132,11 @@ GitHub Pages의 source를 GitHub Actions로 지정합니다. `main` 푸시 시 `
 - 국제규칙을 참고한 입문 게임입니다. 실제 항법 판정 AI나 공인 훈련기는 아니며 거리·시간·점수는 게임 난이도 값입니다. [자료별 적용 범위와 단순화](NAVIGATION_REFERENCES.md)를 확인하세요.
 
 검증: `npm test`, `node tests/watch-school-check.mjs`, `node tests/traffic-world-check.mjs`, `node tests/living-sea-check.mjs`, `node tests/international-check.mjs`. 지형·모델 검사 스크립트는 개발 서버 5197을 사용하며, 일반 브라우저 검사는 `VOYAGE_URL`로 배포 주소를 지정할 수 있습니다.
+
+### v1.10 — 파도와 선체의 접촉 효과
+
+선체 좌우 12곳의 파도 접근·롤링·피칭을 계산해 물보라와 거품을 만듭니다. 물방울은 중력으로 떨어져 다시 수면 거품이 되고, 선미 교란과 회전 항적은 물 위에 남아 퍼지다가 사라집니다. 선수 재입수 때는 물보라가 더 크게 일어납니다. 정박 중에도 입사 파도에 반응합니다.
+
+배 근처 수면을 2 m 격자로 세밀하게 만들고 파도 기울기·파봉 거품을 반영했습니다. 상하 운동은 선박 크기·적재량에 따른 관성과 감쇠를 적용하고, 충돌 강도에 따라 물소리도 변합니다. 모바일·주변 선박의 입자 한도를 별도로 두었습니다. **메뉴 → 환경 설정 → 거친 물결**에서 효과를 쉽게 볼 수 있습니다.
+
+[물리 개념·구현·단순화 범위](HYDRODYNAMICS_REFERENCES.md). 검증: `npm test`, `node tests/foam-check.mjs`, `node tests/foam-model-check.mjs`.

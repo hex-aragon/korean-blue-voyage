@@ -24,7 +24,11 @@ export function stepAttitude(s,ship,cargo,env,t,dt){
  const dx=Math.sin(s.heading)*L*.35,dz=-Math.cos(s.heading)*L*.35;
  const pitchTarget=(waveHeight(s.x+dx,s.z+dz,t,env.wave)-waveHeight(s.x-dx,s.z-dz,t,env.wave))/(L*.7)+info.cgZ/(L*.6);
  s.pitchVelocity+=((pitchTarget-s.pitch)*1.2-s.pitchVelocity*.7)*dt;s.pitch=clamp(s.pitch+s.pitchVelocity*dt,-.35,.35);
- s.heave=waveHeight(s.x,s.z,t,env.wave)-(info.draft-ship.draft*.55)*.18;
+ const surface=waveHeight(s.x,s.z,t,env.wave)*.35+(waveHeight(s.x+dx,s.z+dz,t,env.wave)+waveHeight(s.x-dx,s.z-dz,t,env.wave))*.2+(waveHeight(s.x+sx,s.z+sz,t,env.wave)+waveHeight(s.x-sx,s.z-sz,t,env.wave))*.125;
+ s.waterlineOffset=(info.draft-ship.draft*.55)*.18;
+ const heaveTarget=surface-s.waterlineOffset,omega=clamp(2.2*(17/L)**.28*(ship.mass*100/info.mass)**.2,.8,2.6);
+ s.heaveVelocity=clamp((s.heaveVelocity||0)+((heaveTarget-s.heave)*omega*omega-1.6*omega*(s.heaveVelocity||0))*dt,-6,6);
+ s.heave+=s.heaveVelocity*dt;
  if(Math.abs(s.roll)>.95){s.capsized=true;s.throttle=0;s.speed*=Math.exp(-dt*2);}
  return info;
 }

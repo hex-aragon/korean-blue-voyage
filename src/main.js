@@ -194,6 +194,6 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last
  if(boundaryHit&&t-lastCollision>3){lastCollision=t;setAuto(false);state.throttle=0;toast('해안 또는 장애물에 닿았습니다. 후진해서 수로로 이동하세요.');}
  }}
  if(state.capsized){if($('#rescue').hidden){closePanel();handling=null;}$('#rescue').hidden=false;setAuto(false);}
- if(!paused)ocean?.update(state,t,dt,strength,cargo,handling);audio.update(t,paused?0:state.speed,wind,spec.id==='yacht',paused||state.anchored?0:state.throttle,started&&!paused&&!document.hidden&&!$('#panel').open);uiTimer+=dt;if(uiTimer>.12){uiTimer=0;updateUI();}
+ if(!paused)ocean?.update(state,t,dt,strength,cargo,handling);audio.update(t,paused?0:state.speed,wind,spec.id==='yacht',paused||state.anchored?0:state.throttle,started&&!paused&&!document.hidden&&!$('#panel').open,ocean?.foam.impact||0);uiTimer+=dt;if(uiTimer>.12){uiTimer=0;updateUI();}
 }
 spawnAtPort();const restored=restoreTrip(saved.trip,region,spec);if(restored){state=restored.state;cargo=restored.cargo;mission=gameMode==='mission'?restored.mission:null;completedMission=restored.completed;}else if(gameMode==='mission')mission=localMission(region,state,spec);refresh();syncWelcomeModes();loadAtlas();requestAnimationFrame(animate);
