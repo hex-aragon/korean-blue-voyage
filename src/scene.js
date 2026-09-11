@@ -1,3 +1,4 @@
+import {populateEncounters} from './encounters.js';
 import {oceanGridAxis} from './hydrodynamics.js';
 import {harborGroundHeight} from './harbor-data.js';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
@@ -45,10 +46,10 @@ export class OceanScene{
  float cover=smoothstep(.47,.7,cloud)*smoothstep(.015,.15,direction.y);
  vec3 cloudColor=mood>1.5?vec3(.09,.13,.21):mix(vec3(.58,.66,.71),mood>.5?vec3(1.0,.76,.53):vec3(1.1,1.1,1.04),smoothstep(.4,.8,cloud));
  painted=mix(painted,cloudColor,cover*.87);
- painted=mix(painted,mix(vec3(.10,.14,.18),vec3(.34,.40,.43),cloud)*(.65+altitude*.2),storm*.94);
+ painted=mix(painted,mix(vec3(.10,.14,.18),vec3(.34,.40,.43),cloud)*(.65+altitude*.2),smoothstep(.0,.82,storm));
  gl_FragColor=vec4(painted,1.0);
  `);
- this.sun=new THREE.Vector3();this.light=new THREE.DirectionalLight(0xffe6bf,2.5);this.light.castShadow=true;this.light.shadow.mapSize.set(1024,1024);this.light.shadow.camera.left=-90;this.light.shadow.camera.right=90;this.light.shadow.camera.top=90;this.light.shadow.camera.bottom=-90;this.light.shadow.camera.near=1;this.light.shadow.camera.far=900;this.light.shadow.normalBias=.05;this.scene.add(this.light,this.light.target);this.scene.add(new THREE.HemisphereLight(0xb7d9e5,0x425b56,1.4));
+ this.sun=new THREE.Vector3();this.light=new THREE.DirectionalLight(0xffe6bf,2.5);this.light.castShadow=true;this.light.shadow.mapSize.set(1024,1024);this.light.shadow.camera.left=-90;this.light.shadow.camera.right=90;this.light.shadow.camera.top=90;this.light.shadow.camera.bottom=-90;this.light.shadow.camera.near=1;this.light.shadow.camera.far=900;this.light.shadow.normalBias=.05;this.scene.add(this.light,this.light.target);this.hemisphere=new THREE.HemisphereLight(0xb7d9e5,0x425b56,1.4);this.scene.add(this.hemisphere);
  const normals=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'waternormals.jpg');normals.wrapS=normals.wrapT=THREE.RepeatWrapping;
  const waterGrid=new THREE.PlaneGeometry(22000,22000,256,256),gridPositions=waterGrid.attributes.position;for(let y=0;y<=256;y++)for(let x=0;x<=256;x++)gridPositions.setXYZ(y*257+x,oceanGridAxis(x-128),-oceanGridAxis(y-128),0);gridPositions.needsUpdate=true;waterGrid.computeBoundingSphere();
  this.water=new Water(waterGrid,{textureWidth:512,textureHeight:512,waterNormals:normals,sunDirection:new THREE.Vector3(),sunColor:0xffedcf,waterColor:0x176777,distortionScale:3.2,fog:true});
@@ -62,7 +63,7 @@ export class OceanScene{
  for(let i=0;i<drops;i++){const x=Math.sin(i*127.1)*90,z=Math.sin(i*311.7)*90,y=(i*.618033%1)*85;rainPositions.set([x,y,z,x,y+2.5,z],i*6);rainIds[i*2]=rainIds[i*2+1]=i/drops;}
  const rainGeo=new THREE.BufferGeometry();rainGeo.setAttribute('position',new THREE.BufferAttribute(rainPositions,3));rainGeo.setAttribute('dropId',new THREE.BufferAttribute(rainIds,1));
  this.rain=new THREE.LineSegments(rainGeo,new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{rainTime:{value:0},amount:{value:0},windVector:{value:new THREE.Vector2()}},vertexShader:`attribute float dropId;uniform float rainTime;uniform float amount;uniform vec2 windVector;varying float alpha;void main(){vec3 p=position;float fall=mod(rainTime*30.0+dropId*85.0,85.0);p.y-=fall;p.xz+=windVector*(position.y-fall)*.12;alpha=step(dropId,amount)*amount;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,fragmentShader:`varying float alpha;void main(){gl_FragColor=vec4(.65,.78,.83,alpha*.4);}` }));this.rain.frustumCulled=false;this.scene.add(this.rain);
- this.speedFeel=0;this.orbit=.38;this.zoom=1;this.lookPitch=0;this.cameraMode=0;this.cameraSnap=true;this.setTime('sunset');
+ this.speedFeel=0;this.orbit=-.38;this.zoom=1;this.lookPitch=0;this.cameraMode=0;this.cameraSnap=true;this.setTime('sunset');
  window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
  let dragging=false,px=0,py=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;if(this.cameraMode===1){this.orbit=THREE.MathUtils.clamp(this.orbit,-1.1,1.1);this.lookPitch=THREE.MathUtils.clamp(this.lookPitch+(e.clientY-py)*.002,-.22,.28);}else{this.lookPitch=THREE.MathUtils.clamp(this.lookPitch-(e.clientY-py)*.0012,-.08,.32);}px=e.clientX;py=e.clientY;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
  }
@@ -71,23 +72,24 @@ export class OceanScene{
  if(!this.destination){this.destination=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(58,1.5,8,72),new THREE.MeshBasicMaterial({color:0xf2ce83,transparent:true,opacity:.85,depthWrite:false}));ring.rotation.x=-Math.PI/2;this.destination.add(ring);const beam=new THREE.Mesh(new THREE.CylinderGeometry(4,10,75,16,1,true),new THREE.MeshBasicMaterial({color:0xf2cf85,transparent:true,opacity:.15,side:THREE.DoubleSide,depthWrite:false}));beam.position.y=37;this.destination.add(beam);this.scene.add(this.destination);}
  this.destination.visible=!!target;if(target)this.destination.position.set(target.x,2,target.z);
  }
- setTime(mode){this.timeMode=mode;this.scene.background=mode==='sunset'&&this.outdoorSky?this.outdoorSky:null;this.sky.visible=!this.scene.background;this.scene.environmentIntensity=mode==='night'?.08:.65;this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
+ setTime(mode){this.timeMode=mode;this.scene.background=null;this.sky.visible=true;this.scene.environmentIntensity=mode==='night'?.08:.65;this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
  setWeather(w,s){
  const storm=w.storm||0,night=this.timeMode==='night';this.sky.material.uniforms.storm.value=storm;
- this.scene.background=this.timeMode==='sunset'&&storm<.08&&this.outdoorSky?this.outdoorSky:null;this.sky.visible=!this.scene.background;
+ this.scene.background=null;this.sky.visible=true;
  this.scene.fog.density=.00010+storm*.00036;this.scene.fog.color.set(night?0x263f58:this.timeMode==='sunset'?0xb2b9b0:0x8dc6d3).lerp(new THREE.Color(0x637880),storm);
  this.light.intensity=(night?.25:2.5)*(1-storm*.75);this.scene.environmentIntensity=(night?.08:.65)*(1-storm*.65);
+ this.hemisphere.intensity=(night?.3:1.4)*(1-storm*.62);this.hemisphere.color.set(night?0x637a98:0xb7d9e5).lerp(new THREE.Color(0x73838e),storm);this.water.material.uniforms.sunColor.value.set(night?0x354356:0xffedcf).multiplyScalar(1-storm*.92);this.water.material.uniforms.waterColor.value.set(this.region?.color||0x176777).lerp(new THREE.Color(0x253d48),storm*.78);this.renderer.toneMappingExposure=(night?.24:.72)*(1-storm*.23);
  this.rain.visible=w.rain>.01;this.rain.position.copy(this.camera.position);this.rain.material.uniforms.rainTime.value=w.time;this.rain.material.uniforms.amount.value=w.rain;this.rain.material.uniforms.windVector.value.set(Math.sin(w.direction)*w.wind*.12,-Math.cos(w.direction)*w.wind*.12);
  Object.assign(this.renderer.domElement.dataset,{weather:w.phase,wind:w.wind.toFixed(1),waveStrength:(w.strength||0).toFixed(2),storm:storm.toFixed(2),rain:w.rain.toFixed(2)});
  }
- setCamera(mode){this.cameraMode=mode;this.orbit=mode===1?0:.38;this.lookPitch=0;this.cameraSnap=true;}
+ setCamera(mode){this.cameraMode=mode;this.orbit=mode===1?0:-.38;this.lookPitch=0;this.cameraSnap=true;}
  setShip(spec){if(this.ship){this.scene.remove(this.ship);disposeGroup(this.ship);this.bridge?.texture.dispose();}this.spec=spec;this.foam.reset();this.speedFeel=0;this.ship=makeShip(spec);this.ship.rotation.order='YXZ';this.bridge=makeBridge(spec);this.ship.add(this.bridge.group);this.cargoGroup=new THREE.Group();this.ship.add(this.cargoGroup);this.cargoKey='';this.scene.add(this.ship);this.cameraSnap=true;
  this.lift=box(this.ship,0,-20,0,2.8,2,3.2,0xd8b26e);this.lift.visible=false;
  }
  syncCargo(cargo){const key=JSON.stringify(cargo);if(key===this.cargoKey)return;this.cargoKey=key;this.ship.remove(this.cargoGroup);disposeGroup(this.cargoGroup);this.cargoGroup=makeCargo(this.spec,cargo);this.ship.add(this.cargoGroup);}
 
  setRegion(region){
- disposeGroup(this.land);this.foam.reset();this.terrainReady=this.terrain.load(region);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
+ disposeGroup(this.land);this.nextPopulation=undefined;this.foam.reset();this.terrainReady=this.terrain.load(region);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
  if(region.layout==='harbor'){const built=buildHarbor(region,this.land);this.obstacles=built.obstacles;this.portMeshes=built.rings;this.ports=built.ports;this.setupTraffic(region);return this.ports;}
  const addIsland=(x,z,r,h)=>{
  const geo=new THREE.SphereGeometry(1,34,18,0,Math.PI*2,0,Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);const noise=1+.09*Math.sin(vx*13+vz*9)+.06*Math.cos(vz*19);pos.setXYZ(i,vx*r*noise,vy*h*(.84+.16*Math.sin(vx*8+vz*5))-2,vz*r*noise);}geo.computeVertexNormals();const colors=[];for(let i=0;i<pos.count;i++){const y=pos.getY(i);const c=new THREE.Color(y<4?0xaaa88c:y<10?0x556a50:0x385749);c.multiplyScalar(.85+rand()*.25);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.userData.privateMaterial=true;mesh.position.set(x,0,z);this.land.add(mesh);this.obstacles.push({x,z,radius:r*.9});
@@ -110,17 +112,18 @@ export class OceanScene{
  }
  setupTraffic(region){
  const raw=new URLSearchParams(location.search).get('trafficSeed'),seed=raw!==null&&/^\d+$/.test(raw)&&Number(raw)<=4294967295?Number(raw):Math.floor(Math.random()*4294967296);
- const baseObstacles=[...this.obstacles];this.world=createTraffic(region,baseObstacles,seed,region.layout==='harbor'?()=>Infinity:undefined);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));
+ this.trafficReady=region.layout!=='harbor';const baseObstacles=[...this.obstacles];this.world=createTraffic(region,baseObstacles,seed,region.layout==='harbor'?()=>Infinity:undefined);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));
  const world=this.world;
  if(region.layout==='harbor')this.terrainReady.then(()=>{
-  if(this.world!==world)return;
+  if(this.world!==world)return;this.trafficReady=true;
   const complete=createTraffic(region,baseObstacles,seed,(x,z)=>this.groundHeight(x,z));
   const extras=complete.contacts.filter(c=>c.id.startsWith('outer-')&&Math.hypot(c.x-this.ship.position.x,c.z-this.ship.position.z)>300);
-  world.contacts.push(...extras);this.living.setWorld(world);
+  world.contacts.push(...extras);this.living.syncContacts(world);
  });
  }
 
  update(s,t,dt,strength,cargo,handling=null){
+ if(this.world&&this.trafficReady&&(this.nextPopulation===undefined||t>=this.nextPopulation)){this.nextPopulation=t+2;populateEncounters(this.world,s,this.obstacles,(x,z)=>this.groundHeight(x,z),this.region.layout==='river');this.living.syncContacts(this.world);}
  this.sky.material.uniforms.cloudTime.value=t;this.scene.backgroundRotation.y=t*.00008;this.living.update(this.world,t,strength);
  this.water.position.set(s.x,0,s.z);this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;
  const ship=this.ship;if(!ship)return;this.foam.update(s,this.spec,t,strength);const h=s.heave||0;ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch,-s.heading,-s.roll,'YXZ');
@@ -139,6 +142,8 @@ export class OceanScene{
  if(this.cameraMode===0)this.camera.setViewOffset(innerWidth,innerHeight,innerHeight<520&&innerWidth>innerHeight?innerWidth*.18:0,innerHeight*.015,innerWidth,innerHeight);else this.camera.clearViewOffset();
  this.camera.updateProjectionMatrix();this.cameraSnap=false;this.renderer.domElement.dataset.foam=String(this.foam.surface.count);this.renderer.domElement.dataset.spray=String(this.foam.drops.length);this.renderer.domElement.dataset.waveImpact=this.foam.impact.toFixed(2);
 
+ this.sky.position.copy(this.camera.position);this.sky.updateMatrixWorld(true);this.rain.position.copy(this.camera.position);
+ const visible=this.world.contacts.filter(c=>{const p=new THREE.Vector3(c.x,5,c.z).project(this.camera);return p.z<1&&Math.abs(p.x)<1&&Math.abs(p.y)<1&&Math.hypot(c.x-s.x,c.z-s.z)<1000;});Object.assign(this.renderer.domElement.dataset,{nearby:String(this.world.contacts.filter(c=>Math.hypot(c.x-s.x,c.z-s.z)<800).length),visibleContacts:String(visible.length),localContacts:String(this.world.contacts.filter(c=>c.local).length)});
  this.renderer.render(this.scene,this.camera);
  }
  screenshot(){this.renderer.render(this.scene,this.camera);const a=document.createElement('a');a.download='윤슬-항해.png';a.href=this.renderer.domElement.toDataURL('image/png');a.click();}

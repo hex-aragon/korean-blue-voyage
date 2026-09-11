@@ -37,7 +37,7 @@ export function createTraffic(region,obstacles=[],seed=Math.floor(Math.random()*
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dz=b.z-a.z,f=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));return Math.hypot(p.x-a.x-dx*f,p.z-a.z-dz*f);}
 export function towEnd(c){return {x:c.x-Math.sin(c.heading)*95,z:c.z+Math.cos(c.heading)*95};}
-export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of world.contacts){const old={x:c.x,z:c.z};if(c.kind==='whale'){const a=world.time*.018+(c.id==='whale-2'?2:0);c.x=-570+Math.cos(a)*260;c.z=(c.id==='whale-2'?-2800:-2400)+Math.sin(a)*115;c.heading=Math.atan2(-260*Math.sin(a),-115*Math.cos(a));
+export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of world.contacts){const old={x:c.x,z:c.z};if(c.kind==='whale'&&!c.local){const a=world.time*.018+(c.id==='whale-2'?2:0);c.x=-570+Math.cos(a)*260;c.z=(c.id==='whale-2'?-2800:-2400)+Math.sin(a)*115;c.heading=Math.atan2(-260*Math.sin(a),-115*Math.cos(a));
  const dx=own?c.x-own.x:0,dz=own?c.z-own.z:0,d=Math.hypot(dx,dz),push=own?Math.max(0,150-d):0,blend=1-Math.exp(-dt*2);
  c.avoidX=(c.avoidX||0)+((d>0?dx/d*push:push)-(c.avoidX||0))*blend;c.avoidZ=(c.avoidZ||0)+((d>0?dz/d*push:0)-(c.avoidZ||0))*blend;c.x+=c.avoidX;c.z+=c.avoidZ;
  c.depth=Math.min(0,Math.sin(world.time*.16+(c.id==='whale-2'?2:0))*9);c.visible=c.depth>-3;
@@ -49,9 +49,10 @@ export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of wor
   const ownDistance=own?(c.kind==='towing'?pointSegmentDistance(own,candidate,towEnd({...candidate,heading:nextHeading})):Math.hypot(candidate.x-own.x,candidate.z-own.z)):Infinity;
   const currentOwnDistance=own?(c.kind==='towing'?pointSegmentDistance(own,c,towEnd(c)):Math.hypot(c.x-own.x,c.z-own.z)):Infinity;
   const blocked=own&&(own.assisted||Math.abs(own.speed||0)<.6)&&ownDistance<c.radius+(own.assisted?220:85)&&ownDistance<currentOwnDistance;
-  const other=world.contacts.some(p=>p!==c&&p.kind!=='whale'&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<c.radius+p.radius+15&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<Math.hypot(c.x-p.x,c.z-p.z));
+  const other=world.contacts.some(p=>p!==c&&!['whale','shark'].includes(p.kind)&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<c.radius+p.radius+15&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<Math.hypot(c.x-p.x,c.z-p.z));
   if(!blocked&&!other){c.phase+=c.direction*c.cruise*dt/tangent;Object.assign(c,candidate);c.heading=Math.atan2(-Math.sin(c.phase)*c.rx*c.direction,-Math.cos(c.phase)*c.rz*c.direction);}
   c.speed=blocked||other?0:c.cruise;
+  if(c.local&&['whale','shark'].includes(c.kind)){c.depth=c.kind==='shark'?-.35:-.25-Math.max(0,Math.sin(world.time*.11+c.cx))*.7;c.visible=true;}
  }
  if(c.kind!=='whale'&&(!c.trail?.length||world.time-c.trail[c.trail.length-1].time>=3)){(c.trail??=[]).push({x:c.x,z:c.z,time:world.time});if(c.trail.length>40)c.trail.shift();}
  c.vx=dt>0?(c.x-old.x)/dt:0;c.vz=dt>0?(c.z-old.z)/dt:0;

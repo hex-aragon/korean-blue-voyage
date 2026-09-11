@@ -148,3 +148,11 @@ Outer-approach traffic now joins the harbor circuits with container ships, tanke
 The compact weather button opens calm, breeze, rough sea, squall, typhoon and automatic weather. Clouds, directional rain, visibility, gusts, wind heel, long swell and crest groups change smoothly together. Severe typhoon weather is opt-in. The physical water spectrum is shared with hull motion and foam.
 
 See [weather and traffic sources / model limits](WEATHER_TRAFFIC_REFERENCES.md). `npm test` checks the models; `node tests/weather-traffic-check.mjs` checks radar, storm transitions, recovery, pause and mobile layout against a running preview (or `VOYAGE_URL`).
+
+## v1.12 — Visible traffic throughout a voyage
+
+A bounded encounter population follows the voyage area: up to ten nearby contacts (five service boats in rivers), with randomized safe circuits and replacements when distant contacts leave the area. Pilot launches and surface-observation sharks join fishing boats, tugs, cargo ships, ferries and whales. The default follow camera faces toward the navigable side of the departure harbor. Models are added and removed incrementally without rebuilding existing wakes.
+
+The procedural sky is now camera-centered at every voyage position, including distant waters. HDR background switching was removed; clouds, water color and sunlight, hemisphere illumination, exposure and haze all respond to the same weather value. Severe storms fully replace the warm sky palette. Marine wildlife uses blue learning overlays and is excluded from ship watchkeeping targets.
+
+Regression: `tests/encounters.test.js` checks population bounds, replenishment, movement and safe terrain; `tests/visible-sea-check.mjs` checks visible contacts at 7 km, storm panoramas and mobile layout.
