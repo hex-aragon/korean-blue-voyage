@@ -11,7 +11,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
+  security:
+    uses: ./.github/workflows/security.yml
   deploy:
+    needs: security
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -25,6 +28,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: python3 scripts/check-public-files.py dist
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
