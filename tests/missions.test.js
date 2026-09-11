@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {ships,regions,portLocations} from '../src/data.js';
+import {makeMission,localMission,missionTarget,bearingTo,recommendedDestinations} from '../src/missions.js';
+const busan=regions.find(r=>r.id==='busan'),hakata=regions.find(r=>r.id==='hakata');
+test('모든 해역과 작업 수역은 고유 ID와 유효한 좌표를 가진다',()=>{assert.equal(regions.length,24);const ports=regions.flatMap(portLocations);assert.equal(ports.length,75);assert.equal(new Set(ports.map(p=>p.id)).size,75);for(const p of ports){assert(Number.isFinite(p.x)&&Number.isFinite(p.z));assert(p.regionId);}});
+test('국제 미션은 선적 항구, 외해 게이트, 도착 부두 순서로 안내한다',()=>{const m=makeMission(busan,hakata,0,1,ships[1]);assert.equal(missionTarget(m,busan).id,m.origin.id);m.phase='sailing';assert(missionTarget(m,busan).isGate);assert.equal(missionTarget(m,hakata).id,'hakata-1');assert(!missionTarget(m,hakata).isGate);assert(m.reward>ships[1].reward);});
+test('현재 배에 가까운 항구에서 다른 부두로 출발하는 미션을 만든다',()=>{const p=portLocations(busan)[2],m=localMission(busan,p,ships[0]);assert.equal(m.origin.id,p.id);assert.notEqual(m.id,p.id);});
+test('레이더 방위와 조타 방향은 북쪽 위 좌표와 일치한다',()=>{const state={x:0,z:0,heading:0};assert.equal(bearingTo(state,{x:100,z:0}).bearing,90);assert(bearingTo(state,{x:100,z:0}).relative>0);assert.equal(bearingTo(state,{x:0,z:-100}).distance,100);assert(bearingTo(state,{x:-100,z:0}).relative<0);});
+test('추천 항로는 존재하는 다른 해역을 연결한다',()=>{for(const r of regions)for(const dest of recommendedDestinations(r)){assert.notEqual(dest.id,r.id);assert.notEqual(dest.layout,'river');}});

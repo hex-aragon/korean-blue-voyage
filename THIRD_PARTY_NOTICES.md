@@ -25,3 +25,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 Noto Sans KR and Gowun Batang are served by Google Fonts under the SIL Open Font License.
+
+Natural Earth land data is used in `public/maps/east-asia.json`, clipped from the 1:50m land GeoJSON.
+Source: https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_50m_land.geojson
+Terms: https://www.naturalearthdata.com/about/terms-of-use/
+License: Public domain. Made with Natural Earth.
+
+Official port maps were consulted as references; their images and proprietary 3D tiles are not bundled. See MAP_REFERENCES.md.

@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {regions,ships} from '../src/data.js';
+import {makeMission} from '../src/missions.js';
+import {tripSnapshot,restoreTrip} from '../src/trip-save.js';
+import {createVessel} from '../src/physics.js';
+const origin=regions.find(r=>r.id==='busan'),dest=regions.find(r=>r.id==='hakata'),ship=ships[0],cargo={bays:[1,1,1,1,1,1],high:false,ballast:true};
+test('외해 횡단 후 저장한 화물과 미션을 도착 해역에서 복원한다',()=>{const mission=makeMission(origin,dest,0,0,ship);mission.phase='sailing';const state={...createVessel(),x:-350,z:-2500,heading:Math.PI,speed:5,throttle:1};const restored=restoreTrip(tripSnapshot(dest,ship,state,cargo,mission,null),dest,ship);assert.equal(restored.state.z,-2500);assert(restored.state.anchored);assert.equal(restored.state.speed,0);assert.equal(restored.mission.originRegion,'busan');assert.equal(restored.mission.destinationRegion,'hakata');assert.deepEqual(restored.cargo,cargo);});
+test('손상되거나 다른 배의 저장값은 적용하지 않는다',()=>{const trip=tripSnapshot(origin,ship,createVessel(),cargo,null,null);assert.equal(restoreTrip({...trip,position:{x:NaN,z:0,heading:0}},origin,ship),null);assert.equal(restoreTrip(trip,origin,ships[1]),null);assert.equal(restoreTrip({...trip,cargo:{bays:[100]}},origin,ship),null);});
+test('완료된 운송은 미션을 다시 지급하지 않고 완료 기록으로 복원한다',()=>{const trip=tripSnapshot(dest,ship,createVessel(),cargo,null,{name:'arbitrary text',portId:'hakata-0',reward:4700});const restored=restoreTrip(trip,dest,ship);assert.equal(restored.mission,null);assert.equal(restored.completed.name,'하카타 국제여객부두');assert.equal(restored.completed.reward,4700);});

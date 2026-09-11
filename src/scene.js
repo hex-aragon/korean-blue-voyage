@@ -1,3 +1,4 @@
+import {buildHarbor} from './harbors.js';
 import * as THREE from 'three';
 import {Water} from 'three/addons/objects/Water.js';
 import {Sky} from 'three/addons/objects/Sky.js';
@@ -45,6 +46,10 @@ export class OceanScene{
  window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
  let dragging=false,px=0,py=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;if(this.cameraMode===1){this.orbit=THREE.MathUtils.clamp(this.orbit,-1.1,1.1);this.lookPitch=THREE.MathUtils.clamp(this.lookPitch+(e.clientY-py)*.002,-.22,.28);}else{this.lookPitch=THREE.MathUtils.clamp(this.lookPitch-(e.clientY-py)*.0012,-.08,.32);}px=e.clientX;py=e.clientY;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
  }
+ setDestination(target){
+ if(!this.destination){this.destination=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(58,1.5,8,72),new THREE.MeshBasicMaterial({color:0xf2ce83,transparent:true,opacity:.85,depthWrite:false}));ring.rotation.x=-Math.PI/2;this.destination.add(ring);const beam=new THREE.Mesh(new THREE.CylinderGeometry(4,10,75,16,1,true),new THREE.MeshBasicMaterial({color:0xf2cf85,transparent:true,opacity:.15,side:THREE.DoubleSide,depthWrite:false}));beam.position.y=37;this.destination.add(beam);this.scene.add(this.destination);}
+ this.destination.visible=!!target;if(target)this.destination.position.set(target.x,2,target.z);
+ }
  setTime(mode){this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
  setCamera(mode){this.cameraMode=mode;this.orbit=mode===1?0:.38;this.lookPitch=0;this.cameraSnap=true;}
  setShip(spec){if(this.ship){this.scene.remove(this.ship);disposeGroup(this.ship);this.bridge?.texture.dispose();}this.spec=spec;this.ship=makeShip(spec);this.ship.rotation.order='YXZ';this.bridge=makeBridge(spec);this.ship.add(this.bridge.group);this.cargoGroup=new THREE.Group();this.ship.add(this.cargoGroup);this.cargoKey='';this.scene.add(this.ship);this.wakeLife.fill(0);this.wakePositions.fill(0);this.cameraSnap=true;
@@ -54,6 +59,7 @@ export class OceanScene{
 
  setRegion(region){
  disposeGroup(this.land);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
+ if(region.layout==='harbor'){const built=buildHarbor(region,this.land);this.obstacles=built.obstacles;this.portMeshes=built.rings;this.ports=built.ports;return this.ports;}
  const addIsland=(x,z,r,h)=>{
  const geo=new THREE.SphereGeometry(1,34,18,0,Math.PI*2,0,Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);const noise=1+.09*Math.sin(vx*13+vz*9)+.06*Math.cos(vz*19);pos.setXYZ(i,vx*r*noise,vy*h*(.84+.16*Math.sin(vx*8+vz*5))-2,vz*r*noise);}geo.computeVertexNormals();const colors=[];for(let i=0;i<pos.count;i++){const y=pos.getY(i);const c=new THREE.Color(y<4?0xaaa88c:y<10?0x556a50:0x385749);c.multiplyScalar(.85+rand()*.25);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.userData.privateMaterial=true;mesh.position.set(x,0,z);this.land.add(mesh);this.obstacles.push({x,z,radius:r*.9});
  };

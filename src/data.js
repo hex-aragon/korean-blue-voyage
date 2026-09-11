@@ -1,3 +1,4 @@
+import {harborRegions,harborPorts} from './harbor-data.js';
 export const ships = [
  {id:'yacht',kind:'yacht',category:'leisure',name:'세일링 요트',en:'Serein 38',type:'곡면 선체 · 티크 갑판 · 세일 리깅',length:17,beam:4.6,mass:1,maxSpeed:13,accel:1.6,turn:0.48,draft:1.8,color:0xe5e6df,cargo:'섬 여행',reward:1200,bridgeY:3,bridgeZ:.24,deck:2.5,features:['티크 갑판','마스트와 스테이','선미 콕핏']},
  {id:'container',kind:'container',category:'cargo',name:'컨테이너선',en:'Blue Horizon',type:'선미 브릿지와 규격화된 컨테이너 셀',length:74,beam:12,mass:5,maxSpeed:22,accel:.7,turn:.19,draft:8,color:0x233e4b,cargo:'컨테이너 운송',reward:4800,bridgeY:12,bridgeZ:.33,deck:3.8,features:['컨테이너 셀 가이드','선미 거주구','라싱 브리지']},
@@ -21,5 +22,7 @@ export const regions = [
  {id:'han',name:'한강',en:'Han River',label:'여의도 · 반포',lat:37.52,lon:126.94,color:0x366f77,seed:24,wave:0.16,depth:5,wind:3.1,ports:['여의나루','반포나루','잠실나루'],desc:'도시의 일상에서 잠시 멀어지는 길',layout:'river'},
  {id:'nakdong',name:'낙동강',en:'Nakdong River',label:'을숙도 · 낙동강 하구',lat:35.1,lon:128.94,color:0x387f7b,seed:92,wave:0.22,depth:6,wind:3.8,ports:['을숙도','삼락나루','화명나루'],desc:'갈대와 강바람 사이의 쉼',layout:'river'},
 ];
+regions.push(...harborRegions);
+for(const r of regions){r.country??='KR';}
 export const weatherPresets={calm:{name:'잔잔한 바다',wave:0.45,wind:0.55},breeze:{name:'산들바람',wave:1,wind:1},rough:{name:'거친 물결',wave:2.4,wind:1.8}};
-export function portLocations(region){return region.ports.map((name,i)=>({name,x:Math.sin(i*1.35)*780,z:-300-i*530}));}
+export function portLocations(region){if(region.layout==='harbor')return harborPorts(region);return region.ports.map((name,i)=>({id:region.id+'-'+i,regionId:region.id,name,x:region.layout==='river'?(i%2?1:-1)*225:Math.sin(i*1.35)*780,z:-300-i*530,berth:(i+1)+'번 작업 수역'}));}
