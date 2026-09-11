@@ -1,0 +1,16 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {ships} from '../src/data.js';
+import {createVessel} from '../src/physics.js';
+import {emptyCargo,cargoPreset,stability,rightingLever,stepAttitude,canHandleCargo} from '../src/stability.js';
+const ship=ships[1];
+test('같은 화물을 높이면 KG가 올라가고 GM이 감소한다',()=>{const a=stability(ship,cargoPreset('low')),b=stability(ship,cargoPreset('high'));assert.equal(a.mass,b.mass);assert(b.kg>a.kg);assert(b.gm<a.gm);assert(b.gm<0);});
+test('낮은 밸러스트는 G를 낮추고 흘수를 늘린다',()=>{const a=cargoPreset('high'),b={...a,ballast:true};const x=stability(ship,a),y=stability(ship,b);assert(y.kg<x.kg);assert(y.gm>x.gm);assert(y.draft>x.draft);});
+test('좌현 편중은 좌현 횡경사를 만들고 균등 적재는 중심을 유지한다',()=>{const a=stability(ship,cargoPreset('list'));assert(a.cgX<0);assert(a.list<0);assert.equal(stability(ship,cargoPreset('low')).cgX,0);});
+test('균등 적재에서 복원정은 기울기의 부호에 따라 반대 토크를 준다',()=>{const a=stability(ship,cargoPreset('low'));assert(rightingLever(a,.1)>0);assert(rightingLever(a,-.1)<0);assert.equal(rightingLever(a,0),0);});
+test('정수 중 양의 GM은 초기 기울기를 복원한다',()=>{const s=createVessel();s.roll=.2;for(let i=0;i<4000;i++)stepAttitude(s,ship,cargoPreset('low'),{wave:0},i*.02,.02);assert(Math.abs(s.roll)<.005);assert(!s.capsized);});
+test('편중 적재의 진동은 0도가 아닌 횡경사 각도로 수렴한다',()=>{const s=createVessel(),c=cargoPreset('list'),expected=stability(ship,c).list;for(let i=0;i<6000;i++)stepAttitude(s,ship,c,{wave:0},i*.02,.02);assert(Math.abs(s.roll-expected)<.003);});
+test('음의 GM에서는 작은 기울기가 자라며 안전 복귀가 필요해진다',()=>{const s=createVessel();s.roll=.03;for(let i=0;i<5000;i++)stepAttitude(s,ship,cargoPreset('high'),{wave:0},i*.02,.02);assert(s.capsized);assert.equal(s.throttle,0);});
+test('액체 부분 적재에만 자유수면 보정이 생긴다',()=>{const tanker=ships[2];assert(stability(tanker,{...emptyCargo(),bays:[1,1,1,1,1,1]}).freeSurface>0);assert.equal(stability(tanker,{...emptyCargo(),bays:[3,3,3,3,3,3]}).freeSurface,0);assert.equal(stability(tanker,emptyCargo()).freeSurface,0);});
+test('화물 작업에는 항구·저속·닻 조건이 모두 필요하다',()=>{const s=createVessel(),ports=[{x:0,z:100}];assert(!canHandleCargo(s,ports));s.anchored=true;assert(canHandleCargo(s,ports));s.speed=2;assert(!canHandleCargo(s,ports));s.speed=0;s.x=200;assert(!canHandleCargo(s,ports));});
+test('선수에 무게를 집중하면 선수 하강 트림을 만든다',()=>{const c={...emptyCargo(),bays:[3,3,0,0,0,0]},s=createVessel();for(let i=0;i<2000;i++)stepAttitude(s,ship,c,{wave:0},i*.02,.02);assert(s.pitch<-.01);});

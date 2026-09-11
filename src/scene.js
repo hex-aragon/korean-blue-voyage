@@ -3,6 +3,8 @@ import {Water} from 'three/addons/objects/Water.js';
 import {Sky} from 'three/addons/objects/Sky.js';
 import {waveHeight} from './physics.js';
 import {portLocations} from './data.js';
+import {makeBridge,updateBridge} from './bridge.js';
+import {stability,liquidShip} from './stability.js';
 const mat=(color,roughness=.65)=>new THREE.MeshStandardMaterial({color,roughness});
 const materials=new Map();
 function material(color){if(!materials.has(color))materials.set(color,mat(color));return materials.get(color);}
@@ -24,11 +26,7 @@ export function makeShip(spec){
  for(let i=-3;i<=3;i++)box(g,i*B*.105,6.65,L*.298,B*.075,.65,.09,0x17333d);
  box(g,B*.22,9,L*.36,1.5,3.4,1.5,0xe3b459);box(g,B*.22,10.8,L*.36,1.6,.6,1.6,0x24323c);cylinder(g,-B*.24,10,L*.36,.08,6,0xd5d9d6);
  if(spec.id==='container'){
- const colors=[0xb05339,0xa87447,0x567e7b,0x386170,0xa7b5ae,0xc3a264];
- for(let row=0;row<6;row++)for(let col=0;col<3;col++)for(let h=0;h<(row%3===0?2:3);h++){
- const x=(col-1)*3,z=-L*.28+row*5.1,y=3.8+h*2.3;box(g,x,y,z,2.85,2.15,4.8,colors[(row+col+h)%colors.length]);
- for(let rib=0;rib<6;rib++)box(g,x-1.44,y,z-2+rib*.75,.05,1.95,.08,0x50676c);
- }
+ for(let i=0;i<3;i++)box(g,0,2.8,-L*.23+i*L*.23,B*.83,.35,L*.18,0x52676b);
  }else if(spec.id==='bulk'){
  for(let i=0;i<4;i++){box(g,0,3.2,-L*.29+i*8,B*.8,1.2,6,0xa9aa96);cylinder(g,0,7,-L*.21+i*8,.2,8,0xccaf6c);const boom=box(g,0,9,-L*.21+i*8,.3,.4,8,0xccaf6c);boom.rotation.x=-.3;}
  }else{
@@ -69,12 +67,24 @@ export class OceanScene{
  this.water.material.vertexShader=this.water.material.vertexShader.replace('#include <common>','#include <common>\nuniform float waveStrength;').replace('mirrorCoord = modelMatrix * vec4( position, 1.0 );',`vec3 p=position; vec4 wp=modelMatrix*vec4(p,1.0); p.z+=waveStrength*(sin(wp.x*.022+wp.z*.014-time*1.2)*.72+sin(wp.x*.051-wp.z*.027-time*1.7)*.3+sin(wp.z*.085+wp.x*.03-time*2.1)*.12); mirrorCoord = modelMatrix * vec4(p,1.0);`).replace('modelViewMatrix * vec4( position, 1.0 )','modelViewMatrix * vec4( p, 1.0 )');
  this.scene.add(this.water);this.land=new THREE.Group();this.scene.add(this.land);this.obstacles=[];this.portMeshes=[];
  this.wakePositions=new Float32Array(900*3);this.wakeLife=new Float32Array(900);this.wakeGeo=new THREE.BufferGeometry();this.wakeGeo.setAttribute('position',new THREE.BufferAttribute(this.wakePositions,3));this.wake=new THREE.Points(this.wakeGeo,new THREE.PointsMaterial({color:0xc6eeeb,size:1.8,transparent:true,opacity:.33,depthWrite:false}));this.wake.frustumCulled=false;this.scene.add(this.wake);this.wakeIndex=0;
- this.orbit=.48;this.zoom=1;this.cameraMode=0;this.setTime('sunset');
+ this.orbit=.38;this.zoom=1;this.lookPitch=0;this.cameraMode=0;this.cameraSnap=true;this.setTime('sunset');
  window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
- let dragging=false,px=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;px=e.clientX;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
+ let dragging=false,px=0,py=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;if(this.cameraMode===1){this.orbit=THREE.MathUtils.clamp(this.orbit,-1.1,1.1);this.lookPitch=THREE.MathUtils.clamp(this.lookPitch+(e.clientY-py)*.002,-.22,.28);}px=e.clientX;py=e.clientY;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
  }
  setTime(mode){this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
- setShip(spec){if(this.ship){this.scene.remove(this.ship);disposeGroup(this.ship);}this.spec=spec;this.ship=makeShip(spec);this.scene.add(this.ship);this.wakeLife.fill(0);this.wakePositions.fill(0);}
+ setCamera(mode){this.cameraMode=mode;this.orbit=mode===1?0:.38;this.lookPitch=0;this.cameraSnap=true;}
+ setShip(spec){if(this.ship){this.scene.remove(this.ship);disposeGroup(this.ship);this.bridge?.texture.dispose();}this.spec=spec;this.ship=makeShip(spec);this.ship.rotation.order='YXZ';this.bridge=makeBridge(spec);this.ship.add(this.bridge.group);this.cargoGroup=new THREE.Group();this.ship.add(this.cargoGroup);this.cargoKey='';this.scene.add(this.ship);this.wakeLife.fill(0);this.wakePositions.fill(0);this.cameraSnap=true;
+ this.lift=box(this.ship,0,-20,0,2.8,2,3.2,0xd8b26e);this.lift.visible=false;
+ }
+ syncCargo(cargo){const key=JSON.stringify(cargo);if(key===this.cargoKey)return;this.cargoKey=key;disposeGroup(this.cargoGroup);const B=this.spec.beam,L=this.spec.length;
+ cargo.bays.forEach((n,i)=>{for(let layer=0;layer<n;layer++){
+ const x=(i%2?1:-1)*B*.23,z=(Math.floor(i/2)-1)*L*.23;
+ if(liquidShip(this.spec)){const tank=cylinder(this.cargoGroup,x,4.35,z,Math.min(B*.15,1.6),.18+n*.23,0x79acb4);tank.scale.y=.5+layer*.3;}
+ else if(this.spec.id==='bulk'){box(this.cargoGroup,x,3+layer*.7,z,B*.38,.65,L*.17,0xb7a277);}
+ else {const y=cargo.high?5.2+layer*2.1:3.3+layer*.72;box(this.cargoGroup,x,y,z,B*.38,cargo.high?1.9:.65,L*.18,[0xb66a43,0x457c86,0xb1a478][Math.floor(i/2)]);}}
+ });
+ }
+
  setRegion(region){
  disposeGroup(this.land);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
  const addIsland=(x,z,r,h)=>{
@@ -91,21 +101,28 @@ export class OceanScene{
  if(region.layout==='river')p.x=(i%2?1:-1)*225;
  else addIsland(p.x+230,p.z-60,125,45+i*12);
  box(this.land,p.x+80,2,p.z,85,4,20,0x7f8e8b);box(this.land,p.x+110,5,p.z-18,22,7,20,0xdbd8c8);
+ box(this.land,p.x+86,15,p.z+24,2,28,2,0xc2a875);box(this.land,p.x+50,29,p.z+24,74,2,2,0xb9a070);
  const tower=cylinder(this.land,p.x+110,14,p.z-35,3,23,0xeee9d8);cylinder(this.land,tower.position.x,26,tower.position.z,4,2,0x334e56);
  const ring=new THREE.Mesh(new THREE.TorusGeometry(58,.65,6,72),new THREE.MeshBasicMaterial({color:0xa2ded1,transparent:true,opacity:.7}));ring.rotation.x=Math.PI/2;ring.position.set(p.x,1.2,p.z);ring.userData.privateMaterial=true;this.land.add(ring);this.portMeshes.push(ring);
  });this.ports=ports;return ports;
  }
- update(s,t,dt,strength){
+ update(s,t,dt,strength,cargo,handling=null){
  this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;
- const ship=this.ship;if(!ship)return;const h=waveHeight(s.x,s.z,t,strength);ship.position.set(s.x,h,s.z);ship.rotation.y=-s.heading;
- const half=this.spec.length*.35,dx=Math.sin(s.heading)*half,dz=-Math.cos(s.heading)*half;
- ship.rotation.x=(waveHeight(s.x+dx,s.z+dz,t,strength)-waveHeight(s.x-dx,s.z-dz,t,strength))/(half*2);ship.rotation.z=Math.sin(t*1.2+s.x*.02)*strength*.035/(this.spec.mass*.2+.8)-s.rudder*s.speed*.003;
+ const ship=this.ship;if(!ship)return;const h=s.heave||0;ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch,-s.heading,-s.roll,'YXZ');
+ this.syncCargo(cargo);updateBridge(this.bridge,s,stability(this.spec,cargo),t);
+ this.lift.visible=!!handling;if(handling){const p=handling.progress;this.lift.position.set(18*(1-p),6+Math.sin(p*Math.PI)*14,-this.spec.length*.15);}
+
  if(Math.abs(s.speed)>.3){for(let j=0;j<5;j++){const i=this.wakeIndex++%900,behind=this.spec.length*.46;this.wakePositions[i*3]=s.x-Math.sin(s.heading)*behind+(Math.random()-.5)*this.spec.beam;this.wakePositions[i*3+2]=s.z+Math.cos(s.heading)*behind+(Math.random()-.5)*2;this.wakeLife[i]=1;}}
  for(let i=0;i<900;i++){this.wakeLife[i]=Math.max(0,this.wakeLife[i]-dt*.065);this.wakePositions[i*3+1]=this.wakeLife[i]>0?waveHeight(this.wakePositions[i*3],this.wakePositions[i*3+2],t,strength)+.35:-10;}this.wakeGeo.attributes.position.needsUpdate=true;
  this.portMeshes.forEach(r=>r.position.y=1.6+Math.sin(t)*.35);
  const L=this.spec.length,angle=s.heading+this.orbit;let desired;
- if(this.cameraMode===1){desired=new THREE.Vector3(s.x+Math.sin(s.heading)*L*.1,h+(this.spec.id==='yacht'?5:10),s.z-Math.cos(s.heading)*L*.1);this.camera.position.lerp(desired,1-Math.exp(-dt*4));this.camera.lookAt(s.x+Math.sin(s.heading+this.orbit*.4)*300,h+7,s.z-Math.cos(s.heading+this.orbit*.4)*300);}
- else{const d=(L*2+52)*this.zoom;desired=new THREE.Vector3(s.x-Math.sin(angle)*d,h+d*.24,s.z+Math.cos(angle)*d);this.camera.position.lerp(desired,1-Math.exp(-dt*3));this.camera.lookAt(s.x,4,s.z-L*.18);}
+ if(this.cameraMode===1){
+ ship.updateMatrixWorld(true);desired=this.bridge.eye.getWorldPosition(new THREE.Vector3());this.camera.position.copy(desired);
+ const world=ship.getWorldQuaternion(new THREE.Quaternion());const look=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.035+this.lookPitch,-this.orbit,0,'YXZ'));
+ this.camera.quaternion.copy(world.multiply(look));this.camera.fov=innerWidth<650?78:68;
+ }else{const d=(L*.9+14)*this.zoom*(innerWidth<650?1.18:1);desired=new THREE.Vector3(s.x-Math.sin(angle)*d,h+d*.42,s.z+Math.cos(angle)*d);this.camera.position.lerp(desired,this.cameraSnap?1:1-Math.exp(-dt*5));this.camera.up.set(0,1,0);this.camera.lookAt(s.x,4,s.z-L*.08);this.camera.fov=55;}
+ this.camera.updateProjectionMatrix();this.cameraSnap=false;
+
  this.renderer.render(this.scene,this.camera);
  }
  screenshot(){this.renderer.render(this.scene,this.camera);const a=document.createElement('a');a.download='윤슬-항해.png';a.href=this.renderer.domElement.toDataURL('image/png');a.click();}
