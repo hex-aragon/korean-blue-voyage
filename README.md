@@ -164,3 +164,11 @@ Collisions reduce hull condition according to impact speed, leave a localized hu
 The damage card offers free repeated repair (+8 condition per press while stopped), a fictional Coast Guard dispatch, and a one-button astern escape. The rescue boat uses a checked water corridor, appears in blue on radar with flashing beacons, stops 100 game metres away and completes game-only automatic repair. Requesting rescue focuses the third-person view toward the approaching boat. It does not contact any real emergency service. Cargo, missions and earned money are preserved; hull damage persists on reload. Capsize recovery remains the separate existing port-return flow.
 
 `tests/damage.test.js` covers impact severity/cooldown, repair, damaged astern propulsion, rescue route/arrival and save persistence. `tests/damage-check.mjs` drives a real quay collision, repairs, reverses, checks preserved cargo and runs dispatch-to-repair on mobile.
+
+### v1.14 — 수리 후 자동 재출항 · 해기사 학습 항해
+
+사고 뒤 남아 있던 닻·후진 출력·1× 배속을 복구한다. 수동/구조대 수리 완료 시 지형·장애물·타선·전방 수역을 확인한 위치로 옮겨 전진 65%로 재개하며 화물과 미션을 유지한다. “무조건 후진” 안내는 제거했다. 실제 좌초 대응과 게임용 자동 복구의 차이는 사고 대응 학습에서 설명한다.
+
+메뉴 → **해기사 학습 항해**에서 4~1급을 선택한다. 해사영어·선화운송·선박운용·사고 대응 16개 창작 문제와 조타·감속·레이더·GM 비교 실습, 최초 완료 XP 및 저장 기능을 제공한다. 급수별 난이도는 자체 구성이고 공식 기출·전 범위 시험 대비는 아니다. 분석과 공식 참고 문서는 [MARITIME_ACADEMY_REFERENCES.md](MARITIME_ACADEMY_REFERENCES.md)를 참고한다.
+
+검증: `npm test`, `npm run build`, `node tests/damage-check.mjs`, `node tests/academy-check.mjs`, `node tests/voyage-check.mjs`.

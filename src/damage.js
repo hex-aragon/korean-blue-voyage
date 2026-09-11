@@ -15,3 +15,24 @@ export function rescueRoute(s,obstacles,ground){
 export function stepRescue(c,dt){
  if(c.status!=='responding')return;const target=c.rescuePath[1],dx=target.x-c.x,dz=target.z-c.z,d=Math.hypot(dx,dz),move=Math.min(d,dt*16);c.heading=Math.atan2(dx,-dz);c.speed=d>2?16:0;c.vx=Math.sin(c.heading)*c.speed;c.vz=-Math.cos(c.heading)*c.speed;if(d>2){c.x+=dx/d*move;c.z+=dz/d*move;}else{c.status='assisting';c.speed=c.vx=c.vz=0;}
 }
+
+// Game assistance only: relocation is not a real refloating procedure.
+export function recoveryPose(s,ship,obstacles,ground,contacts=[],river=false){
+ const margin=Math.max(24,ship.length*.55),corridor=260;
+ const water=(x,z)=>Number.isFinite(x)&&Number.isFinite(z)&&Math.hypot(x,z)<8700&&(!river||Math.abs(x)<260)&&ground(x,z)<-1;
+ function safe(p,h){
+  const end={x:p.x+Math.sin(h)*corridor,z:p.z-Math.cos(h)*corridor};
+  if(!clearLeg(p,end,obstacles,margin))return false;
+  for(let d=-margin;d<=corridor;d+=20){const x=p.x+Math.sin(h)*d,z=p.z-Math.cos(h)*d;for(const side of [-margin,0,margin])if(!water(x+Math.cos(h)*side,z+Math.sin(h)*side))return false;
+   if(contacts.some(c=>!['whale','shark','coastguard'].includes(c.kind)&&Math.hypot(x-c.x,z-c.z)<(c.radius||20)+margin+60))return false;
+  }return true;
+ }
+ for(const r of [0,100,220,400,700,1100,1700,2600,4000])for(let a=0;a<(r?24:1);a++){
+  const p={x:s.x+Math.sin(a*Math.PI/12)*r,z:s.z-Math.cos(a*Math.PI/12)*r};
+  for(let turn=0;turn<16;turn++){const offset=Math.ceil(turn/2)*(turn%2?1:-1)*Math.PI/8,h=s.heading+offset;if(safe(p,h))return {...p,heading:h};}
+ }return null;
+}
+export function restorePropulsion(s,pose){
+ if(!pose)return false;
+ Object.assign(s,pose,{damage:0,speed:0,throttle:.65,rudder:0,anchored:false});return true;
+}
