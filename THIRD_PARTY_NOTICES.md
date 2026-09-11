@@ -32,3 +32,20 @@ Terms: https://www.naturalearthdata.com/about/terms-of-use/
 License: Public domain. Made with Natural Earth.
 
 Official port maps were consulted as references; their images and proprietary 3D tiles are not bundled. See MAP_REFERENCES.md.
+
+## Mapzen Terrain Tiles / Terrarium
+
+`public/maps/terrain/*.json` are decoded, sampled derivatives of 18 Terrarium tiles distributed through the AWS Open Data elevation-tiles-prod bucket. Source URL and tile coordinates are embedded in each JSON.
+
+- Mapzen / Tilezen terrain processing: https://github.com/tilezen/joerd
+- Global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey.
+- Global ETOPO1 terrain data: U.S. National Oceanic and Atmospheric Administration.
+- Global source datasets used here are public domain; attribution retained as requested.
+- Provider attribution and terms: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+- Decoding: https://github.com/tilezen/joerd/blob/master/docs/formats.md
+
+These are elevation grids, not satellite photographs or building/port survey models. Game rendering compresses horizontal scale, exaggerates elevation by 1.4 and flattens the harbor play corridor.
+
+## Belfast Sunset (Pure Sky) HDRI — CC0
+
+`public/environments/belfast-sunset.hdr`: 2K original from [Poly Haven](https://polyhaven.com/a/belfast_sunset_puresky). Photography: Dimitrios Savva. Processing: Greg Zaal. Sky edits: Jarod Guest. Licensed CC0. Used for sunset background and outdoor image-based lighting; this sky photograph is not a photograph of a Korean harbor.

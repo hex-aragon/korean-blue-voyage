@@ -22,17 +22,22 @@ export function buildHarbor(region,land){
    if(profile==='urban'&&i===0){cyl(x+390,46,z-110,8,92,0xc08673);cyl(x+390,80,z-110,21,9,0xbac9c3);cyl(x+390,107,z-110,2,40,0xa8bdc4);}
   }else{
    for(const dz of [-75,20,105])crane(x+102,z+dz);
-   for(let a=0;a<7;a++)for(let b=0;b<7;b++){const xx=x+205+a*31;for(let level=0;level<2+(a+b)%2;level++){box(xx,7+level*7,z-90+b*27,27,6.7,13,[0x466f82,0xa77758,0xb2b9a9,0x4e8076][(a+b+level)%4]);}}
+   for(let a=0;a<7;a++)for(let b=0;b<7;b++){const xx=x+205+a*31;for(let level=0;level<2+(a+b)%2;level++){const yy=7+level*7,zz=z-90+b*27,col=[0x466f82,0xa77758,0xb2b9a9,0x4e8076][(a+b+level)%4];box(xx,yy,zz,27,6.7,13,col);
+ for(let rib=0;rib<12;rib++)for(const side of [-1,1])box(xx-12+rib*2.15,yy,zz+side*6.55,.25,5.7,.2,col);
+ for(const side of [-1,1]){box(xx-13.6,yy,zz+side*2.6,.15,5.8,.18,0xc5c6b6);box(xx,yy+3.1,zz+side*6.5,27,.2,.2,0x657773);}}}
   }
   for(let j=0;j<20;j++){const xx=x+560+rand()*450,zz=z-220+rand()*420,height=(profile==='urban'?35:12)+rand()*(profile==='urban'?130:48);const bw=18+rand()*25,bd=22+rand()*20;box(xx,height/2,zz,bw,height,bd,[0x879ca1,0x9daaa5,0x6f8991][j%3]);for(let floor=9;floor<height;floor+=9){box(xx-bw/2-.2,floor,zz,.5,3,bd*.77,0x4f6b7b);box(xx,floor,zz-bd/2-.2,bw*.77,3,.5,0x4f6b7b);}}
   sign(p);const ring=new T.Mesh(new T.TorusGeometry(62,.9,6,64),new T.MeshBasicMaterial({color:0x8bb9ae,transparent:true,opacity:.35}));ring.rotation.x=-Math.PI/2;ring.position.set(x,1,z);ring.userData.privateMaterial=true;land.add(ring);rings.push(ring);
  }
  // Wide navigable entrance, marked by two lighted breakwaters.
  for(const side of [-1,1]){const x=side===1?520:-920;box(x,0,-2100,180,6,32,0x788984);for(let i=0;i<3;i++)obstacles.push({x:x-60+i*60,z:-2100,radius:27});cyl(x+(side===1?-90:90),8,-2100,4,16,side===1?0xede7d4:0xa86655);cyl(x+(side===1?-90:90),17,-2100,4,3,side===1?0x70b894:0xc87462);}
- for(let i=0;i<5;i++)hill((i%2?-1:1)*(1800+rand()*850),-400-i*850,210+rand()*240,80+rand()*180);
- if(region.volcano)hill(1900,-1200,1350,840,true);
+
+ // Surrounding terrain is rendered from bundled open elevation data.
  if(region.profile==='estuary'){for(let j=0;j<4;j++){const sand=new T.Mesh(new T.CylinderGeometry(370,400,3,40),new T.MeshStandardMaterial({color:0x99947a,roughness:1}));sand.scale.z=.6;sand.position.set(-1700-j*240,0,-600-j*550);sand.userData.privateMaterial=true;land.add(sand);obstacles.push({x:sand.position.x,z:sand.position.z,radius:380});}}
  if(region.profile==='channel'){hill(-1900,-700,650,160);for(const side of [-1,1]){box(side*1250,72,-1850,18,150,18,0xb6c4c4);beam([side*1250,145,-1850],[0,80,-1850],.7,0xb4c7c4);}box(0,76,-1850,2600,6,25,0x9fadb0);}
- for(const {geo,color,items} of batches.values()){const m=new T.MeshStandardMaterial({color,roughness:.78});const mesh=new T.InstancedMesh(geo,m,items.length),dummy=new T.Object3D();items.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.scale.set(p.w,p.h,p.d);dummy.rotation.set(0,p.angle,0);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});mesh.userData.privateMaterial=true;mesh.receiveShadow=true;land.add(mesh);}
+ for(const {geo,color,items} of batches.values()){const m=new T.MeshStandardMaterial({color,roughness:.78});const mesh=new T.InstancedMesh(geo,m,items.length),dummy=new T.Object3D();items.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.scale.set(p.w,p.h,p.d);dummy.rotation.set(0,p.angle,0);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});m.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 harborPosition;').replace('#include <project_vertex>','#include <project_vertex>\nharborPosition=(modelMatrix*instanceMatrix*vec4(position,1.0)).xyz;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 harborPosition;').replace('#include <color_fragment>',`#include <color_fragment>
+ float grain=fract(sin(dot(floor(harborPosition*14.0),vec3(12.9898,78.233,37.719)))*43758.5453);
+ float weathering=sin(harborPosition.x*.41+harborPosition.z*.36)*sin(harborPosition.y*.3);
+ diffuseColor.rgb*=.88+grain*.15+weathering*.06;`);};mesh.userData.privateMaterial=true;mesh.receiveShadow=true;land.add(mesh);}
  return {ports,obstacles,rings};
 }

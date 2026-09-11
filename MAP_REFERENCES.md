@@ -42,3 +42,9 @@ python3 scripts/build-atlas.py /path/to/ne_50m_land.geojson
 ```
 
 항만별 렌더링은 `src/harbors.js`, 지역·부두 명칭은 `src/harbor-data.js`, 의뢰와 게이트는 `src/missions.js`가 담당합니다.
+
+## v1.5 공개 고도 지형
+
+18개 항만 지역에 Mapzen Terrarium z10 타일을 각각 129×129 고도 격자로 변환하여 번들에 포함했다. 재생성: Pillow가 설치된 Python으로 `python scripts/build-terrain.py`. 원본 URL, 타일 좌표, 항만의 타일 내 위치, 실제 타일 폭은 각 JSON에 기록된다. 게임에서는 폭 14 km로 압축하고 높이는 1.4배로 표현한다. 중앙 항로는 평탄화한다. 고도 기반 해안에는 좌초 방지가 적용된다. 기존 6개 연안/강 지역은 절차 생성 지형이다. 건물과 부두는 여전히 게임용 배치다.
+
+공개 데이터: [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) / USGS SRTM·GMTED2010 / NOAA ETOPO1. 상세 크레딧은 THIRD_PARTY_NOTICES.md. 어선·상선·여객선·고래는 생성한 게임 오브젝트이며 실제 AIS 또는 생물 관측 데이터가 아니다.

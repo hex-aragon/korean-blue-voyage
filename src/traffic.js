@@ -1,0 +1,13 @@
+// Deterministic local traffic. Distances are compressed game metres, not AIS data.
+import {clearLeg} from './navigation.js';
+export function createTraffic(region,obstacles=[]){
+ if(region.layout==='river')return {time:0,contacts:[],hazards:[]};
+ const paths=[[-260,-180,-570,-550,'fishing'],[-1000,-400,-1100,-1900,'cargo'],[-480,-700,-700,-2300,'fishing'],[-800,-2700,700,-2700,'ferry']];
+ const contacts=paths.filter(([x,z,tx,tz])=>clearLeg({x,z},{x:tx,z:tz},obstacles,45)).map(([x,z,tx,tz,kind],i)=>({id:`traffic-${i}`,kind,name:kind==='fishing'?'조업 어선':kind==='cargo'?'통항 화물선':'연안 여객선',a:{x,z},b:{x:tx,z:tz},x,z,heading:0,speed:kind==='fishing'?2.5:4.5,phase:i*.2,radius:kind==='fishing'?15:28}));
+ const hazards=[{id:'net-1',kind:'net',name:'부표 사이 어망',x:-160,z:-680,radius:65},{id:'net-2',kind:'net',name:'조업 어망',x:-780,z:-1710,radius:65},{id:'drift-1',kind:'debris',name:'표류 목재',x:-420,z:-1190,radius:18}].filter(h=>obstacles.every(o=>Math.hypot(o.x-h.x,o.z-h.z)>o.radius+h.radius+35));
+ contacts.push({id:'whale-1',kind:'whale',name:'고래 보호 수역',x:-550,z:-2080,heading:1,speed:2,radius:30},{id:'whale-2',kind:'whale',name:'고래 보호 수역',x:150,z:-2870,heading:1,speed:2,radius:25});
+ return {time:0,contacts,hazards};
+}
+export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of world.contacts){if(c.kind==='whale'){const a=world.time*.018+(c.id==='whale-2'?2:0);c.x=-570+Math.cos(a)*260;c.z=(c.id==='whale-2'?-2800:-2400)+Math.sin(a)*115;c.heading=Math.atan2(-260*Math.sin(a),-115*Math.cos(a));c.depth=Math.min(0,Math.sin(world.time*.16+(c.id==='whale-2'?2:0))*9);c.visible=c.depth>-3;}else{c.elapsed=(c.elapsed||0)+(own?.anchored&&Math.hypot(own.x-c.x,own.z-c.z)<100?0:dt);const length=Math.hypot(c.b.x-c.a.x,c.b.z-c.a.z),p=(c.elapsed*c.speed/length+c.phase)%2,f=p<1?p:2-p;c.x=c.a.x+(c.b.x-c.a.x)*f;c.z=c.a.z+(c.b.z-c.a.z)*f;c.heading=Math.atan2((c.b.x-c.a.x)*(p<1?1:-1),-(c.b.z-c.a.z)*(p<1?1:-1));}}}
+export function trafficAdvisory(world,state,beam=10){let closest=null;for(const c of [...world.contacts,...world.hazards]){const dx=c.x-state.x,dz=c.z-state.z,distance=Math.hypot(dx,dz),vx=Math.sin(c.heading||0)*(c.speed||0)-Math.sin(state.heading)*state.speed,vz=-Math.cos(c.heading||0)*(c.speed||0)+Math.cos(state.heading)*state.speed,v2=vx*vx+vz*vz,tcpa=v2>.01?Math.max(0,Math.min(35,-(dx*vx+dz*vz)/v2)):0,cpa=Math.hypot(dx+vx*tcpa,dz+vz*tcpa),margin=c.radius+beam*.5+20;
+ const danger=distance<margin+30||(tcpa>0&&cpa<margin&&distance<350);if(distance<350&&(!closest||Number(danger)>Number(closest.danger)||danger===closest.danger&&distance<closest.distance))closest={...c,distance,cpa,tcpa,danger,collision:distance<c.radius+beam*.5};}return closest;}
