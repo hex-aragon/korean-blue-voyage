@@ -156,3 +156,11 @@ A bounded encounter population follows the voyage area: up to ten nearby contact
 The procedural sky is now camera-centered at every voyage position, including distant waters. HDR background switching was removed; clouds, water color and sunlight, hemisphere illumination, exposure and haze all respond to the same weather value. Severe storms fully replace the warm sky palette. Marine wildlife uses blue learning overlays and is excluded from ship watchkeeping targets.
 
 Regression: `tests/encounters.test.js` checks population bounds, replenishment, movement and safe terrain; `tests/visible-sea-check.mjs` checks visible contacts at 7 km, storm panoramas and mobile layout.
+
+## v1.13 — Collision, repair and rescue
+
+Collisions reduce hull condition according to impact speed, leave a localized hull dent/scuff, play an impact sound and reduce propulsion. A cooldown prevents damage on every frame of one contact. Reverse propulsion remains available even with severe damage, and moving away from a vessel overlap is allowed.
+
+The damage card offers free repeated repair (+8 condition per press while stopped), a fictional Coast Guard dispatch, and a one-button astern escape. The rescue boat uses a checked water corridor, appears in blue on radar with flashing beacons, stops 100 game metres away and completes game-only automatic repair. Requesting rescue focuses the third-person view toward the approaching boat. It does not contact any real emergency service. Cargo, missions and earned money are preserved; hull damage persists on reload. Capsize recovery remains the separate existing port-return flow.
+
+`tests/damage.test.js` covers impact severity/cooldown, repair, damaged astern propulsion, rescue route/arrival and save persistence. `tests/damage-check.mjs` drives a real quay collision, repairs, reverses, checks preserved cargo and runs dispatch-to-repair on mobile.

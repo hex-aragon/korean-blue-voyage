@@ -126,7 +126,10 @@ export class OceanScene{
  if(this.world&&this.trafficReady&&(this.nextPopulation===undefined||t>=this.nextPopulation)){this.nextPopulation=t+2;populateEncounters(this.world,s,this.obstacles,(x,z)=>this.groundHeight(x,z),this.region.layout==='river');this.living.syncContacts(this.world);}
  this.sky.material.uniforms.cloudTime.value=t;this.scene.backgroundRotation.y=t*.00008;this.living.update(this.world,t,strength);
  this.water.position.set(s.x,0,s.z);this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;
- const ship=this.ship;if(!ship)return;this.foam.update(s,this.spec,t,strength);const h=s.heave||0;ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch,-s.heading,-s.roll,'YXZ');
+ const ship=this.ship;if(!ship)return;
+ const hull=ship.getObjectByName('hull-surface'),damage=s.damage||0;
+ if(hull&&hull.userData.damage!==damage){const g=hull.geometry,p=g.attributes.position,c=g.attributes.color;hull.userData.originalPositions??=p.array.slice();hull.userData.originalColors??=c.array.slice();const base=hull.userData.originalPositions,colors=hull.userData.originalColors;for(let i=0;i<p.count;i++){const x=base[i*3],y=base[i*3+1],z=base[i*3+2],w=Math.exp(-(((z+this.spec.length*.14)/(this.spec.length*.075))**2))*Math.min(1,(Math.abs(x)/(this.spec.beam*.5))**4)*damage/100;p.setXYZ(i,x*(1-w*.28),y-w*.6,z);for(let j=0;j<3;j++)c.array[i*3+j]=colors[i*3+j]*(1-w*.88);}p.needsUpdate=c.needsUpdate=true;g.computeVertexNormals();hull.userData.damage=damage;}
+ this.renderer.domElement.dataset.damage=damage.toFixed(1);this.foam.update(s,this.spec,t,strength);const h=s.heave||0;ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch,-s.heading,-s.roll,'YXZ');
  this.light.position.copy(this.sun).multiplyScalar(350).add(ship.position);this.light.target.position.copy(ship.position);updateVesselDetails(ship,this.spec,t,handling);
  this.syncCargo(cargo);updateBridge(this.bridge,s,stability(this.spec,cargo),t,{obstacles:this.obstacles,ports:this.ports,world:this.world,target:this.navTarget,route:this.navRoute});
  this.lift.visible=!!handling&&!['carcarrier','ferry','cruise','lng','tanker','chemical'].includes(this.spec.kind);if(handling){const p=handling.progress;this.lift.position.set(18*(1-p),6+Math.sin(p*Math.PI)*14,-this.spec.length*.15);}
@@ -139,6 +142,7 @@ export class OceanScene{
  const world=ship.getWorldQuaternion(new THREE.Quaternion());const look=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.035+this.lookPitch,-this.orbit,0,'YXZ'));
  this.camera.quaternion.copy(world.multiply(look));this.camera.fov=(innerWidth<650?78:68)+pace*3;
  }else{const d=(L*.9+14)*this.zoom*(innerWidth<650?1.45:1.15)*(1+pace*.08);desired=new THREE.Vector3(s.x-Math.sin(angle)*d,h+d*(.11-pace*.025+this.lookPitch)+this.spec.bridgeY*.85,s.z+Math.cos(angle)*d);this.camera.position.lerp(desired,this.cameraSnap?1:1-Math.exp(-dt*5));this.camera.up.set(0,1,0);this.camera.lookAt(s.x+Math.sin(s.heading)*L*.12*pace,h+Math.max(2,this.spec.bridgeY*.6),s.z-Math.cos(s.heading)*L*.12*pace);this.camera.fov=(innerWidth<650?64:62)+pace*7;}
+ if(this.rescueTarget&&this.cameraMode===0){const r=this.rescueTarget,dx=r.x-s.x,dz=r.z-s.z,d=Math.hypot(dx,dz)||1,cx=(r.x+s.x)/2,cz=(r.z+s.z)/2,span=Math.max(150,d)*Math.max(1,.85/this.camera.aspect);let side=1;if(this.groundHeight(cx-dz/d*span,cz+dx/d*span)>0)side=-1;this.camera.position.set(cx-dz/d*span*side,65+d*.13,cz+dx/d*span*side);this.camera.lookAt(cx,3,cz);this.camera.fov=68;}
  if(this.cameraMode===0)this.camera.setViewOffset(innerWidth,innerHeight,innerHeight<520&&innerWidth>innerHeight?innerWidth*.18:0,innerHeight*.015,innerWidth,innerHeight);else this.camera.clearViewOffset();
  this.camera.updateProjectionMatrix();this.cameraSnap=false;this.renderer.domElement.dataset.foam=String(this.foam.surface.count);this.renderer.domElement.dataset.spray=String(this.foam.drops.length);this.renderer.domElement.dataset.waveImpact=this.foam.impact.toFixed(2);
 

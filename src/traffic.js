@@ -1,3 +1,4 @@
+import {stepRescue} from './damage.js';
 // Fictional, seeded traffic in compressed game waters. Never live AIS or a COLREG solver.
 import {clearLeg} from './navigation.js';
 const TAU=Math.PI*2;
@@ -37,7 +38,7 @@ export function createTraffic(region,obstacles=[],seed=Math.floor(Math.random()*
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dz=b.z-a.z,f=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));return Math.hypot(p.x-a.x-dx*f,p.z-a.z-dz*f);}
 export function towEnd(c){return {x:c.x-Math.sin(c.heading)*95,z:c.z+Math.cos(c.heading)*95};}
-export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of world.contacts){const old={x:c.x,z:c.z};if(c.kind==='whale'&&!c.local){const a=world.time*.018+(c.id==='whale-2'?2:0);c.x=-570+Math.cos(a)*260;c.z=(c.id==='whale-2'?-2800:-2400)+Math.sin(a)*115;c.heading=Math.atan2(-260*Math.sin(a),-115*Math.cos(a));
+export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of world.contacts){const old={x:c.x,z:c.z};if(c.kind==='coastguard'){stepRescue(c,dt);}else if(c.kind==='whale'&&!c.local){const a=world.time*.018+(c.id==='whale-2'?2:0);c.x=-570+Math.cos(a)*260;c.z=(c.id==='whale-2'?-2800:-2400)+Math.sin(a)*115;c.heading=Math.atan2(-260*Math.sin(a),-115*Math.cos(a));
  const dx=own?c.x-own.x:0,dz=own?c.z-own.z:0,d=Math.hypot(dx,dz),push=own?Math.max(0,150-d):0,blend=1-Math.exp(-dt*2);
  c.avoidX=(c.avoidX||0)+((d>0?dx/d*push:push)-(c.avoidX||0))*blend;c.avoidZ=(c.avoidZ||0)+((d>0?dz/d*push:0)-(c.avoidZ||0))*blend;c.x+=c.avoidX;c.z+=c.avoidZ;
  c.depth=Math.min(0,Math.sin(world.time*.16+(c.id==='whale-2'?2:0))*9);c.visible=c.depth>-3;
@@ -59,5 +60,5 @@ export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of wor
  }}
 export function contactSolution(c,state,beam=10){const dx=c.x-state.x,dz=c.z-state.z,distance=Math.hypot(dx,dz),vx=(c.vx??Math.sin(c.heading||0)*(c.speed||0))-Math.sin(state.heading)*state.speed,vz=(c.vz??-Math.cos(c.heading||0)*(c.speed||0))+Math.cos(state.heading)*state.speed,v2=vx*vx+vz*vz,rawTcpa=v2>.01?-(dx*vx+dz*vz)/v2:0,tcpa=Math.max(0,rawTcpa),cpa=Math.hypot(dx+vx*tcpa,dz+vz*tcpa),margin=c.radius+beam*.5+20;
  return {...c,distance,cpa,tcpa,rawTcpa,bearing:(Math.atan2(dx,-dz)*180/Math.PI+360)%360,danger:distance<margin+30||(rawTcpa>0&&rawTcpa<180&&cpa<margin*1.5&&distance<1500),collision:distance<c.radius+beam*.5};}
-export function trafficAdvisory(world,state,beam=10){let closest=null;const targets=[...world.contacts,...world.hazards];for(const tow of world.contacts.filter(c=>c.kind==='towing')){const end=towEnd(tow),dx=end.x-tow.x,dz=end.z-tow.z,f=Math.max(0,Math.min(1,((state.x-tow.x)*dx+(state.z-tow.z)*dz)/(dx*dx+dz*dz)));targets.push({...tow,id:`line-${tow.id}`,kind:'towline',name:'예인줄 · 바지선 사이 진입 금지',x:tow.x+dx*f,z:tow.z+dz*f,radius:22});}
+export function trafficAdvisory(world,state,beam=10){let closest=null;const targets=[...world.contacts.filter(c=>c.kind!=='coastguard'),...world.hazards];for(const tow of world.contacts.filter(c=>c.kind==='towing')){const end=towEnd(tow),dx=end.x-tow.x,dz=end.z-tow.z,f=Math.max(0,Math.min(1,((state.x-tow.x)*dx+(state.z-tow.z)*dz)/(dx*dx+dz*dz)));targets.push({...tow,id:`line-${tow.id}`,kind:'towline',name:'예인줄 · 바지선 사이 진입 금지',x:tow.x+dx*f,z:tow.z+dz*f,radius:22});}
  for(const c of targets){const s=contactSolution(c,state,beam);if((s.distance<350||s.danger&&s.distance<1500)&&(!closest||Number(s.collision)>Number(closest.collision)||s.collision===closest.collision&&(Number(s.danger)>Number(closest.danger)||s.danger===closest.danger&&s.distance<closest.distance)))closest=s;}return closest;}
