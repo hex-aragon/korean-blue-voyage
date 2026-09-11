@@ -31,3 +31,6 @@
 body:has(#watch-task:not([hidden])) #sea-watch{display:none}
 @media(max-width:600px){#watch-task{top:204px}}
 @media(max-height:520px) and (orientation:landscape){#watch-task{top:175px;left:18px;max-width:calc(100% - 390px);font-size:10px}}
+/* Compact weather instrument, kept inside the existing top bar on small screens. */
+#weather-readout{position:fixed;top:100px;right:30px;padding:8px 12px;border:1px solid #bddbd52b;border-radius:20px;background:#102b36b5;color:#c9dedc;font-size:11px;backdrop-filter:blur(12px);cursor:pointer;z-index:5}#weather-readout.storm{color:#ffcf98;border-color:#e6ac6260}.segmented:has([data-weather]){flex-wrap:wrap}.segmented [data-weather]{flex:1 1 28%}
+@media(max-width:700px){#weather-readout{top:76px;right:14px;padding:5px 9px;font-size:10px;max-width:calc(100vw - 28px)}#voyage-hint{top:112px}}

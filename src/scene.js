@@ -29,8 +29,8 @@ export class OceanScene{
  new RGBELoader().load(import.meta.env.BASE_URL+'environments/belfast-sunset.hdr',texture=>{texture.mapping=THREE.EquirectangularReflectionMapping;this.outdoorSky=texture;const generator=new THREE.PMREMGenerator(this.renderer);this.environment.dispose();this.environment=generator.fromEquirectangular(texture);this.scene.environment=this.environment.texture;generator.dispose();this.setTime(this.timeMode||'sunset');},undefined,()=>{});
  this.camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.2,18000);
  this.sky=new Sky();this.sky.scale.setScalar(15000);this.scene.add(this.sky);const u=this.sky.material.uniforms;u.turbidity.value=4;u.rayleigh.value=2;u.mieCoefficient.value=.005;u.mieDirectionalG.value=.84;
- this.sky.material.uniforms.mood={value:1};this.sky.material.uniforms.cloudTime={value:0};
- this.sky.material.fragmentShader=this.sky.material.fragmentShader.replace('uniform float mieDirectionalG;', 'uniform float mieDirectionalG;\nuniform float mood;\nuniform float cloudTime;\nfloat hashCloud(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat cloudNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hashCloud(i),hashCloud(i+vec2(1,0)),f.x),mix(hashCloud(i+vec2(0,1)),hashCloud(i+vec2(1,1)),f.x),f.y);}').replace('gl_FragColor = vec4( retColor, 1.0 );', `
+ this.sky.material.uniforms.storm={value:0};this.sky.material.uniforms.mood={value:1};this.sky.material.uniforms.cloudTime={value:0};
+ this.sky.material.fragmentShader=this.sky.material.fragmentShader.replace('uniform float mieDirectionalG;', 'uniform float mieDirectionalG;\nuniform float mood;\nuniform float storm;\nuniform float cloudTime;\nfloat hashCloud(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat cloudNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hashCloud(i),hashCloud(i+vec2(1,0)),f.x),mix(hashCloud(i+vec2(0,1)),hashCloud(i+vec2(1,1)),f.x),f.y);}').replace('gl_FragColor = vec4( retColor, 1.0 );', `
  float altitude=pow(max(direction.y,0.0),0.55);
  vec3 horizon=mood>1.5?vec3(.035,.08,.16):(mood>.5?vec3(1.0,.48,.23):vec3(.55,.8,.93));
  vec3 zenith=mood>1.5?vec3(.003,.012,.04):(mood>.5?vec3(.055,.19,.31):vec3(.035,.27,.6));
@@ -45,6 +45,7 @@ export class OceanScene{
  float cover=smoothstep(.47,.7,cloud)*smoothstep(.015,.15,direction.y);
  vec3 cloudColor=mood>1.5?vec3(.09,.13,.21):mix(vec3(.58,.66,.71),mood>.5?vec3(1.0,.76,.53):vec3(1.1,1.1,1.04),smoothstep(.4,.8,cloud));
  painted=mix(painted,cloudColor,cover*.87);
+ painted=mix(painted,mix(vec3(.10,.14,.18),vec3(.34,.40,.43),cloud)*(.65+altitude*.2),storm*.94);
  gl_FragColor=vec4(painted,1.0);
  `);
  this.sun=new THREE.Vector3();this.light=new THREE.DirectionalLight(0xffe6bf,2.5);this.light.castShadow=true;this.light.shadow.mapSize.set(1024,1024);this.light.shadow.camera.left=-90;this.light.shadow.camera.right=90;this.light.shadow.camera.top=90;this.light.shadow.camera.bottom=-90;this.light.shadow.camera.near=1;this.light.shadow.camera.far=900;this.light.shadow.normalBias=.05;this.scene.add(this.light,this.light.target);this.scene.add(new THREE.HemisphereLight(0xb7d9e5,0x425b56,1.4));
@@ -52,11 +53,15 @@ export class OceanScene{
  const waterGrid=new THREE.PlaneGeometry(22000,22000,256,256),gridPositions=waterGrid.attributes.position;for(let y=0;y<=256;y++)for(let x=0;x<=256;x++)gridPositions.setXYZ(y*257+x,oceanGridAxis(x-128),-oceanGridAxis(y-128),0);gridPositions.needsUpdate=true;waterGrid.computeBoundingSphere();
  this.water=new Water(waterGrid,{textureWidth:512,textureHeight:512,waterNormals:normals,sunDirection:new THREE.Vector3(),sunColor:0xffedcf,waterColor:0x176777,distortionScale:3.2,fog:true});
  this.water.rotation.x=-Math.PI/2;this.water.material.uniforms.waveStrength={value:1};
- this.water.material.vertexShader=this.water.material.vertexShader.replace('#include <common>','#include <common>\nuniform float waveStrength;').replace('mirrorCoord = modelMatrix * vec4( position, 1.0 );',`vec3 p=position; vec4 wp=modelMatrix*vec4(p,1.0); p.z+=waveStrength*(sin(wp.x*.022+wp.z*.014-time*1.2)*.72+sin(wp.x*.051-wp.z*.027-time*1.7)*.3+sin(wp.z*.085+wp.x*.03-time*2.1)*.12); mirrorCoord = modelMatrix * vec4(p,1.0);`).replace('modelViewMatrix * vec4( position, 1.0 )','modelViewMatrix * vec4( p, 1.0 )');
- this.water.material.fragmentShader=this.water.material.fragmentShader.replace('uniform float time;', 'uniform float time;\nuniform float waveStrength;').replace('vec3 surfaceNormal = normalize( noise.xzy * vec3( 1.5, 1.0, 1.5 ) );', `vec2 wp=worldPosition.xz;vec2 slope=waveStrength*(vec2(.022,.014)*.72*cos(wp.x*.022+wp.y*.014-time*1.2)+vec2(.051,-.027)*.3*cos(wp.x*.051-wp.y*.027-time*1.7)+vec2(.03,.085)*.12*cos(wp.y*.085+wp.x*.03-time*2.1));vec3 surfaceNormal=normalize(noise.xzy*vec3(1.5,1.0,1.5)+vec3(-slope.x,0.0,-slope.y));`);
- this.water.material.fragmentShader=this.water.material.fragmentShader.replace('float rf0 = 0.3;', 'float rf0 = 0.025;').replace('vec3 outgoingLight = albedo;', `float crest=smoothstep(.045,.12,length(slope))*smoothstep(.0,.8,sin(wp.x*.022+wp.y*.014-time*1.2))*smoothstep(.9,2.8,waveStrength);float broken=smoothstep(.12,.55,abs(noise.x)+abs(noise.y));vec3 outgoingLight=mix(albedo,vec3(.72,.83,.80),crest*broken*.18);`);
+ this.water.material.vertexShader=this.water.material.vertexShader.replace('#include <common>','#include <common>\nuniform float waveStrength;').replace('mirrorCoord = modelMatrix * vec4( position, 1.0 );',`vec3 p=position; vec4 wp=modelMatrix*vec4(p,1.0); p.z+=waveStrength*(sin(wp.x*.022+wp.z*.014-time*1.2)*.72+sin(wp.x*.051-wp.z*.027-time*1.7)*.3+sin(wp.z*.085+wp.x*.03-time*2.1)*.12+sin(wp.x*.007+wp.z*.010-time*.52)*.35); mirrorCoord = modelMatrix * vec4(p,1.0);`).replace('modelViewMatrix * vec4( position, 1.0 )','modelViewMatrix * vec4( p, 1.0 )');
+ this.water.material.fragmentShader=this.water.material.fragmentShader.replace('uniform float time;', 'uniform float time;\nuniform float waveStrength;').replace('vec3 surfaceNormal = normalize( noise.xzy * vec3( 1.5, 1.0, 1.5 ) );', `vec2 wp=worldPosition.xz;vec2 slope=waveStrength*(vec2(.022,.014)*.72*cos(wp.x*.022+wp.y*.014-time*1.2)+vec2(.051,-.027)*.3*cos(wp.x*.051-wp.y*.027-time*1.7)+vec2(.03,.085)*.12*cos(wp.y*.085+wp.x*.03-time*2.1)+vec2(.007,.010)*.35*cos(wp.x*.007+wp.y*.010-time*.52));vec3 surfaceNormal=normalize(noise.xzy*vec3(1.5,1.0,1.5)+vec3(-slope.x,0.0,-slope.y));`);
+ this.water.material.fragmentShader=this.water.material.fragmentShader.replace('float rf0 = 0.3;', 'float rf0 = 0.025;').replace('vec3 outgoingLight = albedo;', `float crest=smoothstep(.045,.12,length(slope))*smoothstep(.0,.8,sin(wp.x*.022+wp.y*.014-time*1.2))*smoothstep(.9,2.8,waveStrength);float broken=smoothstep(.12,.55,abs(noise.x)+abs(noise.y));vec3 outgoingLight=mix(albedo,vec3(.72,.83,.80),crest*broken*min(.65,.14+waveStrength*.07));`);
  this.scene.add(this.water);this.land=new THREE.Group();this.scene.add(this.land);this.obstacles=[];this.portMeshes=[];this.terrain=new OpenTerrain(this.scene);this.living=new LivingSea(this.scene);this.foam=new FoamWake(this.scene);
 
+ const drops=innerWidth<700?600:1400,rainPositions=new Float32Array(drops*6),rainIds=new Float32Array(drops*2);
+ for(let i=0;i<drops;i++){const x=Math.sin(i*127.1)*90,z=Math.sin(i*311.7)*90,y=(i*.618033%1)*85;rainPositions.set([x,y,z,x,y+2.5,z],i*6);rainIds[i*2]=rainIds[i*2+1]=i/drops;}
+ const rainGeo=new THREE.BufferGeometry();rainGeo.setAttribute('position',new THREE.BufferAttribute(rainPositions,3));rainGeo.setAttribute('dropId',new THREE.BufferAttribute(rainIds,1));
+ this.rain=new THREE.LineSegments(rainGeo,new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{rainTime:{value:0},amount:{value:0},windVector:{value:new THREE.Vector2()}},vertexShader:`attribute float dropId;uniform float rainTime;uniform float amount;uniform vec2 windVector;varying float alpha;void main(){vec3 p=position;float fall=mod(rainTime*30.0+dropId*85.0,85.0);p.y-=fall;p.xz+=windVector*(position.y-fall)*.12;alpha=step(dropId,amount)*amount;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,fragmentShader:`varying float alpha;void main(){gl_FragColor=vec4(.65,.78,.83,alpha*.4);}` }));this.rain.frustumCulled=false;this.scene.add(this.rain);
  this.speedFeel=0;this.orbit=.38;this.zoom=1;this.lookPitch=0;this.cameraMode=0;this.cameraSnap=true;this.setTime('sunset');
  window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
  let dragging=false,px=0,py=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;if(this.cameraMode===1){this.orbit=THREE.MathUtils.clamp(this.orbit,-1.1,1.1);this.lookPitch=THREE.MathUtils.clamp(this.lookPitch+(e.clientY-py)*.002,-.22,.28);}else{this.lookPitch=THREE.MathUtils.clamp(this.lookPitch-(e.clientY-py)*.0012,-.08,.32);}px=e.clientX;py=e.clientY;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
@@ -67,6 +72,14 @@ export class OceanScene{
  this.destination.visible=!!target;if(target)this.destination.position.set(target.x,2,target.z);
  }
  setTime(mode){this.timeMode=mode;this.scene.background=mode==='sunset'&&this.outdoorSky?this.outdoorSky:null;this.sky.visible=!this.scene.background;this.scene.environmentIntensity=mode==='night'?.08:.65;this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
+ setWeather(w,s){
+ const storm=w.storm||0,night=this.timeMode==='night';this.sky.material.uniforms.storm.value=storm;
+ this.scene.background=this.timeMode==='sunset'&&storm<.08&&this.outdoorSky?this.outdoorSky:null;this.sky.visible=!this.scene.background;
+ this.scene.fog.density=.00010+storm*.00036;this.scene.fog.color.set(night?0x263f58:this.timeMode==='sunset'?0xb2b9b0:0x8dc6d3).lerp(new THREE.Color(0x637880),storm);
+ this.light.intensity=(night?.25:2.5)*(1-storm*.75);this.scene.environmentIntensity=(night?.08:.65)*(1-storm*.65);
+ this.rain.visible=w.rain>.01;this.rain.position.copy(this.camera.position);this.rain.material.uniforms.rainTime.value=w.time;this.rain.material.uniforms.amount.value=w.rain;this.rain.material.uniforms.windVector.value.set(Math.sin(w.direction)*w.wind*.12,-Math.cos(w.direction)*w.wind*.12);
+ Object.assign(this.renderer.domElement.dataset,{weather:w.phase,wind:w.wind.toFixed(1),waveStrength:(w.strength||0).toFixed(2),storm:storm.toFixed(2),rain:w.rain.toFixed(2)});
+ }
  setCamera(mode){this.cameraMode=mode;this.orbit=mode===1?0:.38;this.lookPitch=0;this.cameraSnap=true;}
  setShip(spec){if(this.ship){this.scene.remove(this.ship);disposeGroup(this.ship);this.bridge?.texture.dispose();}this.spec=spec;this.foam.reset();this.speedFeel=0;this.ship=makeShip(spec);this.ship.rotation.order='YXZ';this.bridge=makeBridge(spec);this.ship.add(this.bridge.group);this.cargoGroup=new THREE.Group();this.ship.add(this.cargoGroup);this.cargoKey='';this.scene.add(this.ship);this.cameraSnap=true;
  this.lift=box(this.ship,0,-20,0,2.8,2,3.2,0xd8b26e);this.lift.visible=false;
@@ -74,7 +87,7 @@ export class OceanScene{
  syncCargo(cargo){const key=JSON.stringify(cargo);if(key===this.cargoKey)return;this.cargoKey=key;this.ship.remove(this.cargoGroup);disposeGroup(this.cargoGroup);this.cargoGroup=makeCargo(this.spec,cargo);this.ship.add(this.cargoGroup);}
 
  setRegion(region){
- disposeGroup(this.land);this.foam.reset();this.terrain.load(region);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
+ disposeGroup(this.land);this.foam.reset();this.terrainReady=this.terrain.load(region);this.region=region;this.obstacles=[];this.portMeshes=[];this.water.material.uniforms.waterColor.value.set(region.color);const rand=seeded(region.seed);
  if(region.layout==='harbor'){const built=buildHarbor(region,this.land);this.obstacles=built.obstacles;this.portMeshes=built.rings;this.ports=built.ports;this.setupTraffic(region);return this.ports;}
  const addIsland=(x,z,r,h)=>{
  const geo=new THREE.SphereGeometry(1,34,18,0,Math.PI*2,0,Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);const noise=1+.09*Math.sin(vx*13+vz*9)+.06*Math.cos(vz*19);pos.setXYZ(i,vx*r*noise,vy*h*(.84+.16*Math.sin(vx*8+vz*5))-2,vz*r*noise);}geo.computeVertexNormals();const colors=[];for(let i=0;i<pos.count;i++){const y=pos.getY(i);const c=new THREE.Color(y<4?0xaaa88c:y<10?0x556a50:0x385749);c.multiplyScalar(.85+rand()*.25);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.userData.privateMaterial=true;mesh.position.set(x,0,z);this.land.add(mesh);this.obstacles.push({x,z,radius:r*.9});
@@ -95,7 +108,18 @@ export class OceanScene{
  const ring=new THREE.Mesh(new THREE.TorusGeometry(58,.65,6,72),new THREE.MeshBasicMaterial({color:0xa2ded1,transparent:true,opacity:.7}));ring.rotation.x=Math.PI/2;ring.position.set(p.x,1.2,p.z);ring.userData.privateMaterial=true;this.land.add(ring);this.portMeshes.push(ring);
  });this.ports=ports;this.setupTraffic(region);return ports;
  }
- setupTraffic(region){const raw=new URLSearchParams(location.search).get('trafficSeed'),seed=raw!==null&&/^\d+$/.test(raw)&&Number(raw)<=4294967295?Number(raw):undefined;this.world=createTraffic(region,this.obstacles,seed);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));}
+ setupTraffic(region){
+ const raw=new URLSearchParams(location.search).get('trafficSeed'),seed=raw!==null&&/^\d+$/.test(raw)&&Number(raw)<=4294967295?Number(raw):Math.floor(Math.random()*4294967296);
+ const baseObstacles=[...this.obstacles];this.world=createTraffic(region,baseObstacles,seed,region.layout==='harbor'?()=>Infinity:undefined);this.living.setWorld(this.world);this.obstacles.push(...this.world.hazards.map(h=>({...h,hazard:true})));
+ const world=this.world;
+ if(region.layout==='harbor')this.terrainReady.then(()=>{
+  if(this.world!==world)return;
+  const complete=createTraffic(region,baseObstacles,seed,(x,z)=>this.groundHeight(x,z));
+  const extras=complete.contacts.filter(c=>c.id.startsWith('outer-')&&Math.hypot(c.x-this.ship.position.x,c.z-this.ship.position.z)>300);
+  world.contacts.push(...extras);this.living.setWorld(world);
+ });
+ }
+
  update(s,t,dt,strength,cargo,handling=null){
  this.sky.material.uniforms.cloudTime.value=t;this.scene.backgroundRotation.y=t*.00008;this.living.update(this.world,t,strength);
  this.water.position.set(s.x,0,s.z);this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;

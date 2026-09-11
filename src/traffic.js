@@ -4,7 +4,7 @@ const TAU=Math.PI*2;
 export function seededRandom(seed){let n=seed>>>0;return ()=>{n+=0x6D2B79F5;let t=Math.imul(n^n>>>15,1|n);t^=t+Math.imul(t^t>>>7,61|t);return ((t^t>>>14)>>>0)/4294967296;};}
 export function routePoint(c,phase=c.phase){return {x:c.cx+Math.cos(phase)*c.rx,z:c.cz+Math.sin(phase)*c.rz};}
 function safeLoop(c,obstacles){for(let i=0;i<64;i++)if(!clearLeg(routePoint(c,i*TAU/64),routePoint(c,(i+1)*TAU/64),obstacles,c.radius+30))return false;return true;}
-export function createTraffic(region,obstacles=[],seed=Math.floor(Math.random()*4294967296)){
+export function createTraffic(region,obstacles=[],seed=Math.floor(Math.random()*4294967296),groundHeight=()=>-40){
  const world={time:0,seed,contacts:[],hazards:[],trackedId:null};
  if(region.layout==='river')return world;
  const random=seededRandom(seed),contacts=world.contacts;
@@ -22,6 +22,17 @@ export function createTraffic(region,obstacles=[],seed=Math.floor(Math.random()*
  contacts.push({id:'whale-1',kind:'whale',name:'고래 보호 수역',x:-550,z:-2080,heading:1,speed:2,radius:30},{id:'whale-2',kind:'whale',name:'고래 보호 수역',x:150,z:-2870,heading:1,speed:2,radius:25});
  // Avoid placing working gear across a roaming ship's circuit.
  world.contacts=contacts.filter(c=>!c.rx||safeLoop({...c,radius:c.radius+(c.kind==='towing'?110:0)},world.hazards));
+ // Broad crossing corridors extend from the anchorage to the outer approaches.
+ // Pre-populated at a distance: no contact teleports into the player's path.
+ for(let attempt=0;attempt<400&&world.contacts.filter(c=>c.rx).length<22;attempt++){
+  const kind=['cargo','ferry','tug','fishing'][attempt%4];
+  const c={id:`outer-${attempt}`,kind,name:names[kind],cx:-500+(random()-.5)*2800,cz:-500-random()*5000,rx:200+random()*1000,rz:180+random()*950,phase:random()*TAU,direction:random()<.5?-1:1,cruise:kind==='ferry'?9+random()*4:kind==='cargo'?6+random()*3:3+random()*3,radius:kind==='cargo'||kind==='ferry'?55:17,status:'transit',modelKind:kind==='cargo'?['container','bulk','tanker','carcarrier'][Math.floor(attempt/4)%4]:kind};
+  if(!safeLoop(c,[...obstacles,...world.hazards]))continue;
+  let water=true;for(let i=0;i<128&&water;i++){const p=routePoint(c,i*TAU/128);for(const [dx,dz] of [[0,0],[-c.radius,0],[c.radius,0],[0,-c.radius],[0,c.radius]])if(groundHeight(p.x+dx,p.z+dz)>-1)water=false;}if(!water)continue;
+  Object.assign(c,routePoint(c));if(world.contacts.some(p=>Math.hypot(c.x-p.x,c.z-p.z)<c.radius+p.radius+120))continue;
+  c.heading=Math.atan2(-Math.sin(c.phase)*c.rx*c.direction,-Math.cos(c.phase)*c.rz*c.direction);c.speed=c.cruise;world.contacts.push(c);
+ }
+ for(const c of world.contacts)c.trail=[];
  return world;
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dz=b.z-a.z,f=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));return Math.hypot(p.x-a.x-dx*f,p.z-a.z-dz*f);}
@@ -42,9 +53,10 @@ export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of wor
   if(!blocked&&!other){c.phase+=c.direction*c.cruise*dt/tangent;Object.assign(c,candidate);c.heading=Math.atan2(-Math.sin(c.phase)*c.rx*c.direction,-Math.cos(c.phase)*c.rz*c.direction);}
   c.speed=blocked||other?0:c.cruise;
  }
+ if(c.kind!=='whale'&&(!c.trail?.length||world.time-c.trail[c.trail.length-1].time>=3)){(c.trail??=[]).push({x:c.x,z:c.z,time:world.time});if(c.trail.length>40)c.trail.shift();}
  c.vx=dt>0?(c.x-old.x)/dt:0;c.vz=dt>0?(c.z-old.z)/dt:0;
  }}
 export function contactSolution(c,state,beam=10){const dx=c.x-state.x,dz=c.z-state.z,distance=Math.hypot(dx,dz),vx=(c.vx??Math.sin(c.heading||0)*(c.speed||0))-Math.sin(state.heading)*state.speed,vz=(c.vz??-Math.cos(c.heading||0)*(c.speed||0))+Math.cos(state.heading)*state.speed,v2=vx*vx+vz*vz,rawTcpa=v2>.01?-(dx*vx+dz*vz)/v2:0,tcpa=Math.max(0,rawTcpa),cpa=Math.hypot(dx+vx*tcpa,dz+vz*tcpa),margin=c.radius+beam*.5+20;
- return {...c,distance,cpa,tcpa,rawTcpa,bearing:(Math.atan2(dx,-dz)*180/Math.PI+360)%360,danger:distance<margin+30||(rawTcpa>0&&rawTcpa<90&&cpa<margin&&distance<350),collision:distance<c.radius+beam*.5};}
+ return {...c,distance,cpa,tcpa,rawTcpa,bearing:(Math.atan2(dx,-dz)*180/Math.PI+360)%360,danger:distance<margin+30||(rawTcpa>0&&rawTcpa<180&&cpa<margin*1.5&&distance<1500),collision:distance<c.radius+beam*.5};}
 export function trafficAdvisory(world,state,beam=10){let closest=null;const targets=[...world.contacts,...world.hazards];for(const tow of world.contacts.filter(c=>c.kind==='towing')){const end=towEnd(tow),dx=end.x-tow.x,dz=end.z-tow.z,f=Math.max(0,Math.min(1,((state.x-tow.x)*dx+(state.z-tow.z)*dz)/(dx*dx+dz*dz)));targets.push({...tow,id:`line-${tow.id}`,kind:'towline',name:'예인줄 · 바지선 사이 진입 금지',x:tow.x+dx*f,z:tow.z+dz*f,radius:22});}
- for(const c of targets){const s=contactSolution(c,state,beam);if(s.distance<350&&(!closest||Number(s.collision)>Number(closest.collision)||s.collision===closest.collision&&(Number(s.danger)>Number(closest.danger)||s.danger===closest.danger&&s.distance<closest.distance)))closest=s;}return closest;}
+ for(const c of targets){const s=contactSolution(c,state,beam);if((s.distance<350||s.danger&&s.distance<1500)&&(!closest||Number(s.collision)>Number(closest.collision)||s.collision===closest.collision&&(Number(s.danger)>Number(closest.danger)||s.danger===closest.danger&&s.distance<closest.distance)))closest=s;}return closest;}

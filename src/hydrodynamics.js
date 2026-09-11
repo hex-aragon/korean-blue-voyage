@@ -1,8 +1,8 @@
 import {clamp,waveHeight} from './physics.js';
 // Derivatives of the exact spectrum used by the water shader, in game metres/seconds.
 export function waveSample(x,z,t,strength=1){
- const a=x*.022+z*.014-t*1.2,b=x*.051-z*.027-t*1.7,c=z*.085+x*.03-t*2.1;
- return {height:waveHeight(x,z,t,strength),dx:strength*(.72*.022*Math.cos(a)+.3*.051*Math.cos(b)+.12*.03*Math.cos(c)),dz:strength*(.72*.014*Math.cos(a)-.3*.027*Math.cos(b)+.12*.085*Math.cos(c)),vertical:strength*(-.72*1.2*Math.cos(a)-.3*1.7*Math.cos(b)-.12*2.1*Math.cos(c))};
+ const a=x*.022+z*.014-t*1.2,b=x*.051-z*.027-t*1.7,c=z*.085+x*.03-t*2.1,d=x*.007+z*.010-t*.52;
+ return {height:waveHeight(x,z,t,strength),dx:strength*(.72*.022*Math.cos(a)+.3*.051*Math.cos(b)+.12*.03*Math.cos(c)+.35*.007*Math.cos(d)),dz:strength*(.72*.014*Math.cos(a)-.3*.027*Math.cos(b)+.12*.085*Math.cos(c)+.35*.010*Math.cos(d)),vertical:strength*(-.72*1.2*Math.cos(a)-.3*1.7*Math.cos(b)-.12*2.1*Math.cos(c)-.35*.52*Math.cos(d))};
 }
 export function hullContacts(s,spec,t,strength){
  const contacts=[],cs=Math.cos(s.heading),sn=Math.sin(s.heading),speed=s.speed||0,heave=s.heave??waveHeight(s.x,s.z,t,strength),vertical=s.heaveVelocity??waveSample(s.x,s.z,t,strength).vertical;

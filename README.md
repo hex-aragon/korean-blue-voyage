@@ -140,3 +140,11 @@ GitHub Pages의 source를 GitHub Actions로 지정합니다. `main` 푸시 시 `
 배 근처 수면을 2 m 격자로 세밀하게 만들고 파도 기울기·파봉 거품을 반영했습니다. 상하 운동은 선박 크기·적재량에 따른 관성과 감쇠를 적용하고, 충돌 강도에 따라 물소리도 변합니다. 모바일·주변 선박의 입자 한도를 별도로 두었습니다. **메뉴 → 환경 설정 → 거친 물결**에서 효과를 쉽게 볼 수 있습니다.
 
 [물리 개념·구현·단순화 범위](HYDRODYNAMICS_REFERENCES.md). 검증: `npm test`, `node tests/foam-check.mjs`, `node tests/foam-model-check.mjs`.
+
+## v1.11 — Traffic and changing weather
+
+Outer-approach traffic now joins the harbor circuits with container ships, tankers, bulkers, car carriers, ferries and service vessels. Radar opens at 3.2 km, extends to 6.4 km, shows motion history and 60-second vectors, and supports tapping a vessel to inspect CPA/TCPA. Orange overlays identify working gear and obstacles.
+
+The compact weather button opens calm, breeze, rough sea, squall, typhoon and automatic weather. Clouds, directional rain, visibility, gusts, wind heel, long swell and crest groups change smoothly together. Severe typhoon weather is opt-in. The physical water spectrum is shared with hull motion and foam.
+
+See [weather and traffic sources / model limits](WEATHER_TRAFFIC_REFERENCES.md). `npm test` checks the models; `node tests/weather-traffic-check.mjs` checks radar, storm transitions, recovery, pause and mobile layout against a running preview (or `VOYAGE_URL`).

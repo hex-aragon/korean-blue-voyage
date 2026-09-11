@@ -1,0 +1,14 @@
+import {chromium,expect} from '@playwright/test';
+const browser=await chromium.launch({channel:'chrome',headless:true}),page=await browser.newPage({viewport:{width:1440,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+await page.addInitScript(()=>localStorage.setItem('yoonseul-save',JSON.stringify({mode:'free',region:'busan',ship:'container'})));
+await page.goto(process.env.VOYAGE_URL||'http://127.0.0.1:5198/');await page.locator('#start').click();const radar=page.locator('#radar'),canvas=page.locator('#ocean canvas');
+await expect.poll(async()=>Number(await radar.getAttribute('data-in-range'))).toBeGreaterThan(5);expect(Number(await radar.getAttribute('data-hazards'))).toBeGreaterThan(0);const traffic=await radar.evaluate(c=>({...c.dataset}));
+await page.waitForTimeout(1000);await page.screenshot({path:'/tmp/traffic-approaches.png'});
+const box=await radar.boundingBox();await radar.click({position:{x:box.width*.48,y:box.height*.44}});await expect(radar).not.toHaveAttribute('data-tracked','');
+await page.locator('#radar-range').click();await expect(radar).toHaveAttribute('data-range','6400');await page.locator('#radar-range').click();await expect(radar).toHaveAttribute('data-range','400');
+await page.locator('#weather-readout').click();await page.locator('[data-weather="typhoon"]').click();await page.locator('[data-time="day"]').click();await page.locator('#close-panel').click();
+await expect.poll(async()=>Number(await canvas.getAttribute('data-storm')),{timeout:45000}).toBeGreaterThan(.8);await expect.poll(async()=>Number(await canvas.getAttribute('data-rain'))).toBeGreaterThan(.8);expect(Number(await canvas.getAttribute('data-wave-strength'))).toBeGreaterThan(4);await page.screenshot({path:'/tmp/typhoon-desktop.png'});const weather=await canvas.evaluate(c=>({...c.dataset}));
+await page.locator('#pause').click();const frozen=await canvas.evaluate(c=>({...c.dataset}));await page.waitForTimeout(300);expect(await canvas.evaluate(c=>({...c.dataset}))).toEqual(frozen);await page.locator('#pause').click();
+await page.locator('#camera-toggle').click();await page.screenshot({path:'/tmp/typhoon-bridge.png'});await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/typhoon-mobile.png'});expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
+await page.locator('#weather-readout').click();await page.locator('[data-weather="calm"]').click();await page.locator('#close-panel').click();await expect.poll(async()=>Number(await canvas.getAttribute('data-rain')),{timeout:45000}).toBeLessThan(.2);
+console.log({traffic,weather,pause:'frozen',mobile:'390px',errors});await browser.close();expect(errors).toEqual([]);

@@ -18,7 +18,8 @@ export function stepAttitude(s,ship,cargo,env,t,dt){
  dt=clamp(dt,0,.05);const info=stability(ship,cargo),B=ship.beam,L=ship.length;
  const sx=Math.cos(s.heading)*B*.5,sz=Math.sin(s.heading)*B*.5;
  const slope=(waveHeight(s.x+sx,s.z+sz,t,env.wave)-waveHeight(s.x-sx,s.z-sz,t,env.wave))/B;
- const torque=-slope*B*.65+s.rudder*s.speed*.06+(info.gm<=0?.015:0);
+ const windHeel=Math.sin((env.windDirection??.9)-s.heading)*(env.wind||0)**2*.000045;
+ const torque=windHeel-slope*B*.65+s.rudder*s.speed*.06+(info.gm<=0?.015:0);
  s.rollVelocity+=(-9.81*rightingLever(info,s.roll)/(B*.38)**2+torque*.3-s.rollVelocity*.34)*dt;
  s.roll=clamp(s.roll+s.rollVelocity*dt,-1.1,1.1);
  const dx=Math.sin(s.heading)*L*.35,dz=-Math.cos(s.heading)*L*.35;

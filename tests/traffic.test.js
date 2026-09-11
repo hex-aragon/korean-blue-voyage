@@ -16,3 +16,5 @@ test('정지한 배 앞에서 예인줄과 바지선까지 고려해 일시 정�
 test('정지 선박 옆에서 멀어지는 타선은 계속 진행한다',()=>{const c={id:'departing',kind:'tug',cx:0,cz:0,rx:260,rz:230,phase:0,direction:1,cruise:4,radius:17,x:260,z:0,heading:Math.PI,speed:4},w={time:0,contacts:[c],hazards:[]};stepTraffic(w,.05,{x:260,z:-80,speed:0,anchored:true});assert(c.z>0);assert(c.speed>0);});
 
 test('자동 항해 보조일 때만 접근 타선을 일찍 대기시킨다',()=>{const make=()=>({time:0,hazards:[],contacts:[{id:'tug',kind:'tug',cx:0,cz:0,rx:260,rz:230,phase:0,direction:1,cruise:4,radius:17,x:260,z:0,heading:Math.PI,speed:4}]});const a=make(),b=make(),own={x:260,z:200,speed:5,heading:0};stepTraffic(a,.05,{...own,assisted:true});stepTraffic(b,.05,own);assert.equal(a.contacts[0].speed,0);assert(b.contacts[0].speed>0);});
+
+test('교차 항로가 외해까지 이어지며 위치와 궤적은 연속적이다',()=>{const w=createTraffic({layout:'open'},[],42);assert(w.contacts.filter(c=>c.rx).length>=20);assert(w.contacts.some(c=>Math.hypot(c.x,c.z)>3200));for(let i=0;i<2600;i++){const old=w.contacts.map(c=>({x:c.x,z:c.z}));stepTraffic(w,.05);w.contacts.forEach((c,j)=>{if(c.rx)assert(Math.hypot(c.x-old[j].x,c.z-old[j].z)<1);});}assert(w.contacts.filter(c=>c.rx).every(c=>c.trail.length===40));});
