@@ -92,8 +92,8 @@ export function disposeVessel(g){g.userData.disposed=true;g.traverse(o=>{o.geome
 function jetSki(g,p,s){
 const mat=(color,roughness=.35,metalness=.1)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 const black=mat(0x112333,.63),shell=mat(0x10aebf,.2,.35),white=mat(0xe7f1ee,.28),skin=mat(0xd7a484,.7);
-const ell=(parent,x,y,z,sx,sy,sz,m)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;parent.add(mesh);return mesh;};
-const tube=(parent,a,b,r,m)=>{const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),mesh=new THREE.Mesh(new THREE.CapsuleGeometry(r,start.distanceTo(end),8,20),m);mesh.position.copy(start.clone().add(end).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),end.sub(start).normalize());mesh.castShadow=true;parent.add(mesh);};
+const ell=(parent,x,y,z,sx,sy,sz,m)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.userData.privateMaterial=true;parent.add(mesh);return mesh;};
+const tube=(parent,a,b,r,m)=>{const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),mesh=new THREE.Mesh(new THREE.CapsuleGeometry(r,start.distanceTo(end),8,20),m);mesh.position.copy(start.clone().add(end).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),end.sub(start).normalize());mesh.castShadow=true;mesh.userData.privateMaterial=true;parent.add(mesh);};
 ell(g,0,.10,0,.72,.32,1.8,black);ell(g,0,.34,-.22,.65,.26,1.52,shell);ell(g,0,.48,-.6,.52,.25,.92,white);ell(g,0,.65,.38,.29,.17,.85,black);ell(g,0,.68,-.75,.38,.22,.5,shell);
 for(const side of [-1,1]){tube(g,[side*.58,.32,-.85],[side*.62,.31,1.2],.055,black);for(let i=0;i<7;i++)tube(g,[side*.35,.40,.15+i*.13],[side*.58,.39,.15+i*.13],.018,black);tube(g,[side*.36,.65,-1.02],[side*.48,.49,-.48],.025,mat(0x253746));}
 tube(g,[0,.7,-.64],[0,1.0,-.47],.055,black);tube(g,[-.43,1.02,-.47],[.43,1.02,-.47],.04,black);ell(g,0,.92,-.64,.14,.07,.12,mat(0x122c3d,.15));
