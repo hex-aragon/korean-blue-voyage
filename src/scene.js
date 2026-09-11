@@ -1,3 +1,4 @@
+import {harborGroundHeight} from './harbor-data.js';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 import {FoamWake} from './foam.js';
 import {OpenTerrain} from './terrain.js';
@@ -57,7 +58,8 @@ export class OceanScene{
  window.addEventListener('resize',()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);});
  let dragging=false,px=0,py=0;this.renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;this.renderer.domElement.setPointerCapture(e.pointerId);});this.renderer.domElement.addEventListener('pointermove',e=>{if(dragging){this.orbit-=(e.clientX-px)*.005;if(this.cameraMode===1){this.orbit=THREE.MathUtils.clamp(this.orbit,-1.1,1.1);this.lookPitch=THREE.MathUtils.clamp(this.lookPitch+(e.clientY-py)*.002,-.22,.28);}else{this.lookPitch=THREE.MathUtils.clamp(this.lookPitch-(e.clientY-py)*.0012,-.08,.32);}px=e.clientX;py=e.clientY;}});this.renderer.domElement.addEventListener('pointerup',()=>dragging=false);this.renderer.domElement.addEventListener('pointercancel',()=>dragging=false);this.renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();this.zoom=THREE.MathUtils.clamp(this.zoom+e.deltaY*.001,.5,2.3);},{passive:false});
  }
- setDestination(target){
+ groundHeight(x,z){return Math.max(this.terrain.heightAt(x,z),harborGroundHeight(this.region,x,z));}
+ setDestination(target){this.navTarget=target;
  if(!this.destination){this.destination=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(58,1.5,8,72),new THREE.MeshBasicMaterial({color:0xf2ce83,transparent:true,opacity:.85,depthWrite:false}));ring.rotation.x=-Math.PI/2;this.destination.add(ring);const beam=new THREE.Mesh(new THREE.CylinderGeometry(4,10,75,16,1,true),new THREE.MeshBasicMaterial({color:0xf2cf85,transparent:true,opacity:.15,side:THREE.DoubleSide,depthWrite:false}));beam.position.y=37;this.destination.add(beam);this.scene.add(this.destination);}
  this.destination.visible=!!target;if(target)this.destination.position.set(target.x,2,target.z);
  }
@@ -75,7 +77,7 @@ export class OceanScene{
  const geo=new THREE.SphereGeometry(1,34,18,0,Math.PI*2,0,Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++){const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);const noise=1+.09*Math.sin(vx*13+vz*9)+.06*Math.cos(vz*19);pos.setXYZ(i,vx*r*noise,vy*h*(.84+.16*Math.sin(vx*8+vz*5))-2,vz*r*noise);}geo.computeVertexNormals();const colors=[];for(let i=0;i<pos.count;i++){const y=pos.getY(i);const c=new THREE.Color(y<4?0xaaa88c:y<10?0x556a50:0x385749);c.multiplyScalar(.85+rand()*.25);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));mesh.userData.privateMaterial=true;mesh.position.set(x,0,z);this.land.add(mesh);this.obstacles.push({x,z,radius:r*.9});
  };
  if(region.layout==='river'){
- for(const side of [-1,1]){box(this.land,side*860,-4,-2500,1100,10,13000,0x607651);for(let i=0;i<70;i++){const x=side*(380+rand()*550),z=800-i*100;box(this.land,x,12,z,15+rand()*25,20+rand()*65,20+rand()*25,region.id==='han'?0x9ba8a5:0x768878);}}
+ for(const side of [-1,1]){box(this.land,side*860,-4,-2500,1100,18,13000,0x607651);for(let i=0;i<70;i++){const x=side*(380+rand()*550),z=800-i*100;const h=20+rand()*65;box(this.land,x,5+h/2,z,15+rand()*25,h,20+rand()*25,region.id==='han'?0x9ba8a5:0x768878);}}
  // Bridge leaves a clear navigable channel underneath.
  box(this.land,0,37,-1350,1200,3,16,0xbac4bb);for(const x of [-310,310])box(this.land,x,17,-1350,10,36,12,0x83958e);
  }else{
@@ -96,7 +98,7 @@ export class OceanScene{
  this.water.material.uniforms.time.value=t;this.water.material.uniforms.waveStrength.value=strength;
  const ship=this.ship;if(!ship)return;this.foam.update(s,this.spec,t,strength);const h=s.heave||0;ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch,-s.heading,-s.roll,'YXZ');
  this.light.position.copy(this.sun).multiplyScalar(350).add(ship.position);this.light.target.position.copy(ship.position);updateVesselDetails(ship,this.spec,t,handling);
- this.syncCargo(cargo);updateBridge(this.bridge,s,stability(this.spec,cargo),t);
+ this.syncCargo(cargo);updateBridge(this.bridge,s,stability(this.spec,cargo),t,{obstacles:this.obstacles,ports:this.ports,world:this.world,target:this.navTarget,route:this.navRoute});
  this.lift.visible=!!handling&&!['carcarrier','ferry','cruise','lng','tanker','chemical'].includes(this.spec.kind);if(handling){const p=handling.progress;this.lift.position.set(18*(1-p),6+Math.sin(p*Math.PI)*14,-this.spec.length*.15);}
 
  if(Math.abs(s.speed)>.3){for(let j=0;j<5;j++){const i=this.wakeIndex++%900,behind=this.spec.length*.46;this.wakePositions[i*3]=s.x-Math.sin(s.heading)*behind+(Math.random()-.5)*this.spec.beam;this.wakePositions[i*3+2]=s.z+Math.cos(s.heading)*behind+(Math.random()-.5)*2;this.wakeLife[i]=1;}}

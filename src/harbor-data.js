@@ -23,3 +23,5 @@ export const harborRegions=[
 export const countries={KR:'한국',CN:'중국',JP:'일본'};
 export function harborPorts(region){return region.ports.map((name,i)=>({id:`${region.id}-${i}`,regionId:region.id,name,x:[0,-340,110][i],z:[-300,-990,-1640][i],kind:i===1&&region.profile==='industrial'?'tank':region.profile,berth:`${i+1}번 작업 수역`}));}
 export const seaGate=region=>region.exit||{x:-350,z:-2500,name:'외해 출항 지점'};
+// The same footprint as the rendered reclamation and quay foundations.
+export function harborGroundHeight(region,x,z){if(region.layout!=='harbor')return -10;if(x>=730&&x<=1430&&z>=-2300&&z<=400)return 7;for(const p of harborPorts(region)){if(x>=p.x+65&&x<=p.x+495&&Math.abs(z-p.z)<=150)return 7;if(x>=p.x+230&&x<=p.x+1290&&Math.abs(z-p.z)<=270)return 7;}return -10;}

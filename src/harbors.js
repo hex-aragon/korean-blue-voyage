@@ -2,15 +2,20 @@ import * as T from 'three';
 import {harborPorts} from './harbor-data.js';
 // District silhouettes inspired by port plans; compact navigable geometry, not surveyed quays.
 export function buildHarbor(region,land){
- const ports=harborPorts(region),obstacles=[],rings=[],batches=new Map();let seed=region.seed;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
- const box=(x,y,z,w,h,d,color,angle=0)=>{const k='b'+color;if(!batches.has(k))batches.set(k,{geo:new T.BoxGeometry(1,1,1),color,items:[]});batches.get(k).items.push({x,y,z,w,h,d,angle});};
- const cyl=(x,y,z,r,h,color)=>{const k='c'+color;if(!batches.has(k))batches.set(k,{geo:new T.CylinderGeometry(1,1,1,20),color,items:[]});batches.get(k).items.push({x,y,z,w:r,h,d:r,angle:0});};
- const beam=(a,b,width,color)=>{const dir=new T.Vector3().subVectors(new T.Vector3(...b),new T.Vector3(...a));const g=new T.Mesh(new T.CylinderGeometry(width,width,dir.length(),8),new T.MeshStandardMaterial({color,roughness:.7}));g.position.copy(new T.Vector3(...a).add(new T.Vector3(...b)).multiplyScalar(.5));g.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dir.normalize());g.userData.privateMaterial=true;land.add(g);};
+ const ports=harborPorts(region),obstacles=[],rings=[],batches=new Map();let lift=0;let seed=region.seed;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+ const box=(x,y,z,w,h,d,color,angle=0)=>{const k='b'+color;if(!batches.has(k))batches.set(k,{geo:new T.BoxGeometry(1,1,1),color,items:[]});batches.get(k).items.push({x,y:y+lift,z,w,h,d,angle});};
+ const cyl=(x,y,z,r,h,color)=>{const k='c'+color;if(!batches.has(k))batches.set(k,{geo:new T.CylinderGeometry(1,1,1,20),color,items:[]});batches.get(k).items.push({x,y:y+lift,z,w:r,h,d:r,angle:0});};
+ const beam=(a,b,width,color)=>{const dir=new T.Vector3().subVectors(new T.Vector3(...b),new T.Vector3(...a));const g=new T.Mesh(new T.CylinderGeometry(width,width,dir.length(),8),new T.MeshStandardMaterial({color,roughness:.7}));g.position.copy(new T.Vector3(...a).add(new T.Vector3(...b)).multiplyScalar(.5));g.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dir.normalize());g.position.y+=lift;g.userData.privateMaterial=true;land.add(g);};
  function hill(x,z,r,h,volcano=false){const geo=volcano?new T.ConeGeometry(r,h,64):new T.SphereGeometry(1,36,20,0,Math.PI*2,0,Math.PI/2);const m=new T.Mesh(geo,new T.MeshStandardMaterial({color:region.volcano?0x436654:0x476250,roughness:1}));if(volcano)m.position.set(x,h/2-8,z);else{m.scale.set(r,h,r);m.position.set(x,-5,z);}m.userData.privateMaterial=true;land.add(m);obstacles.push({x,z,radius:r*.95});}
  function crane(x,z){const blue=region.country==='CN'?0x557b9b:region.country==='JP'?0xb77060:0x6ba6ad;for(const dz of [-13,13]){beam([x,3,z+dz],[x+10,58,z+dz],1.7,blue);beam([x+45,3,z+dz],[x+35,58,z+dz],1.7,blue);box(x+12,63,z+dz,126,3,2.7,blue);beam([x+20,77,z+dz],[x-49,63,z+dz],.35,0x8c989b);}box(x+23,59,z,30,8,36,blue);box(x+20,72,z,3,20,3,blue);box(x-33,40,z,2,42,1,0x7b8984);box(x-33,19,z,18,2,10,0xd8b463);}
  function sign(port){const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='#143543';ctx.fillRect(0,0,512,96);ctx.strokeStyle='#bcd2c6';ctx.lineWidth=3;ctx.strokeRect(3,3,506,90);ctx.fillStyle='#eef2df';ctx.textAlign='center';ctx.font='bold 32px sans-serif';ctx.fillText(port.name,256,43);ctx.font='22px sans-serif';ctx.fillStyle='#dac28a';ctx.fillText(port.berth+' · 화물 선적 / 하역',256,78);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;const mesh=new T.Mesh(new T.PlaneGeometry(82,15.4),new T.MeshBasicMaterial({map:tex,side:T.DoubleSide}));mesh.rotation.y=-Math.PI/2;mesh.position.set(port.x+67,20,port.z);mesh.userData.privateMaterial=true;mesh.userData.ownedTexture=tex;land.add(mesh);}
  for(const [i,p] of ports.entries()){
-  const x=p.x,z=p.z;box(x+280,1,z,430,5,300,0x7b8989);box(x+480,0,z,300,4,510,0x77816c);box(x+290,4,z+119,410,.25,15,0x3f525a);for(let k=0;k<16;k++)box(x+88+k*25,4.2,z+119,12,.12,.5,0xdddac4);
+  const x=p.x,z=p.z;lift=0;
+  // Continuous reclaimed ground supports the complete yard and skyline, down below sea level.
+  box(x+280,-2,z,430,18,300,0x727d7b);box(x+760,-2,z,1060,18,540,0x687461);
+  box(x+66,3,z,3,8,300,0x919b94);box(x+70,7.2,z,10,.4,300,0xd1c6a0);
+  for(let seam=-140;seam<=140;seam+=20)box(x+64.3,2,z+seam,.2,9,.28,0x4c5c5b);
+  lift=3.5;box(x+290,4,z+119,410,.25,15,0x3f525a);for(let k=0;k<16;k++)box(x+88+k*25,4.2,z+119,12,.12,.5,0xdddac4);
   for(const dx of [125,225,325,425])for(const dz of [-90,0,90])obstacles.push({x:x+dx,z:z+dz,radius:55,radarHidden:dx!==125||dz!==-90,...(dx===125&&dz===-90?{radarRect:{x:x+280,z,w:430,d:300}}:{})});
   for(const dz of [-140,-100,-60,60,100,140]){cyl(x+69,4,z+dz,2.2,3,0xb9ab76);box(x+64,0,z+dz,2,5,12,0x263f45);}
   const profile=region.profile;
@@ -26,11 +31,14 @@ export function buildHarbor(region,land){
  for(let rib=0;rib<12;rib++)for(const side of [-1,1])box(xx-12+rib*2.15,yy,zz+side*6.55,.25,5.7,.2,col);
  for(const side of [-1,1]){box(xx-13.6,yy,zz+side*2.6,.15,5.8,.18,0xc5c6b6);box(xx,yy+3.1,zz+side*6.5,27,.2,.2,0x657773);}}}
   }
-  for(let j=0;j<20;j++){const xx=x+560+rand()*450,zz=z-220+rand()*420,height=(profile==='urban'?35:12)+rand()*(profile==='urban'?130:48);const bw=18+rand()*25,bd=22+rand()*20;box(xx,height/2,zz,bw,height,bd,[0x879ca1,0x9daaa5,0x6f8991][j%3]);for(let floor=9;floor<height;floor+=9){box(xx-bw/2-.2,floor,zz,.5,3,bd*.77,0x4f6b7b);box(xx,floor,zz-bd/2-.2,bw*.77,3,.5,0x4f6b7b);}}
+  for(let j=0;j<20;j++){const xx=x+560+rand()*450,zz=z-220+rand()*420,height=(profile==='urban'?35:12)+rand()*(profile==='urban'?130:48);const bw=18+rand()*25,bd=22+rand()*20;box(xx,height/2+3.5,zz,bw,height,bd,[0x879ca1,0x9daaa5,0x6f8991][j%3]);for(let floor=9;floor<height;floor+=9){box(xx-bw/2-.2,floor+3.5,zz,.5,3,bd*.77,0x4f6b7b);box(xx,floor+3.5,zz-bd/2-.2,bw*.77,3,.5,0x4f6b7b);}}
   sign(p);const ring=new T.Mesh(new T.TorusGeometry(62,.9,6,64),new T.MeshBasicMaterial({color:0x8bb9ae,transparent:true,opacity:.35}));ring.rotation.x=-Math.PI/2;ring.position.set(x,1,z);ring.userData.privateMaterial=true;land.add(ring);rings.push(ring);
  }
+ lift=0;box(1080,-2,-950,700,18,2700,0x65745f);
+ // Collision coverage for the added land; keep berth approaches open.
+ for(const p of ports)for(let x=p.x+550;x<p.x+1250;x+=180)for(let z=p.z-180;z<=p.z+180;z+=180)obstacles.push({x,z,radius:115,radarHidden:x!==p.x+550||z!==p.z-180,...(x===p.x+550&&z===p.z-180?{radarRect:{x:p.x+760,z:p.z,w:1060,d:540}}:{})});
  // Wide navigable entrance, marked by two lighted breakwaters.
- for(const side of [-1,1]){const x=side===1?520:-920;box(x,0,-2100,180,6,32,0x788984);for(let i=0;i<3;i++)obstacles.push({x:x-60+i*60,z:-2100,radius:27});cyl(x+(side===1?-90:90),8,-2100,4,16,side===1?0xede7d4:0xa86655);cyl(x+(side===1?-90:90),17,-2100,4,3,side===1?0x70b894:0xc87462);}
+ for(const side of [-1,1]){const x=side===1?520:-920;box(x,0,-2100,180,14,32,0x788984);for(let i=0;i<3;i++)obstacles.push({x:x-60+i*60,z:-2100,radius:27});cyl(x+(side===1?-90:90),14,-2100,4,16,side===1?0xede7d4:0xa86655);cyl(x+(side===1?-90:90),23,-2100,4,3,side===1?0x70b894:0xc87462);}
 
  // Surrounding terrain is rendered from bundled open elevation data.
  if(region.profile==='estuary'){for(let j=0;j<4;j++){const sand=new T.Mesh(new T.CylinderGeometry(370,400,3,40),new T.MeshStandardMaterial({color:0x99947a,roughness:1}));sand.scale.z=.6;sand.position.set(-1700-j*240,0,-600-j*550);sand.userData.privateMaterial=true;land.add(sand);obstacles.push({x:sand.position.x,z:sand.position.z,radius:380});}}
