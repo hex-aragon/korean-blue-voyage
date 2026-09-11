@@ -6,8 +6,10 @@ export function stepVessel(s,ship,env,dt,input){
  s.throttle=clamp(s.throttle+(input.throttle||0)*dt*0.35,-0.3,1);
  s.rudder+=(clamp(input.steer||0,-1,1)-s.rudder)*Math.min(1,dt*2.2);
  const windAssist=ship.id==='yacht'?Math.max(0,Math.cos(s.heading-0.9))*env.wind*0.035:0;
- const target=s.anchored?0:s.throttle*(ship.maxSpeed*0.5144)*(1+windAssist);
- s.speed+=(target-s.speed)*dt*(s.anchored?1.6:ship.accel*0.18/(env.loadFactor||1));
+ const lever=Math.abs(s.throttle),cruise=clamp((lever-.3)/.7,0,1),lowSpeedRatio=(ship.referenceSpeed||ship.maxSpeed)/ship.maxSpeed;
+ const target=s.anchored?0:s.throttle*(ship.maxSpeed*0.5144)*(lowSpeedRatio+(1-lowSpeedRatio)*cruise*cruise*(3-2*cruise))*(1+windAssist);
+ const response=s.anchored?1.6:ship.accel*(Math.abs(target)<Math.abs(s.speed)?.46:.38)/(env.loadFactor||1);
+ s.speed+=(target-s.speed)*(1-Math.exp(-dt*response));
  s.heading+=s.rudder*ship.turn*clamp(s.speed/5,-0.4,1)*dt;
  if(!s.anchored){const current=env.river?0.48:0.12;const dx=Math.sin(s.heading)*s.speed*dt+Math.sin(0.9)*env.wind*0.004/ship.mass*dt;const dz=-Math.cos(s.heading)*s.speed*dt+current*dt;s.x+=dx;s.z+=dz;s.distance+=Math.hypot(dx,dz);}
  return s;

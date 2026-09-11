@@ -14,6 +14,8 @@ export const ships = [
  {id:'maersk',kind:'container',category:'cargo',name:'머스크 참고형',en:'Nordic Pioneer',type:'선수 브릿지형 컨테이너선 · 비공식 창작선',length:108,beam:17,mass:9,maxSpeed:21,accel:.45,turn:.11,draft:12,color:0x68aabd,cargo:'원양 컨테이너 운송',reward:8200,bridgeY:18,bridgeZ:-.36,deck:5,brand:'MAERSK',features:['머스크 계열 청색 도장','선수 브릿지','후방 컨테이너 갑판'],source:'https://www.maersk.com/news/articles/2024/01/26/maersk-names-first-vessel-of-its-large-methanol-enabled-fleet-ane-maersk',reference:'Ane Mærsk의 선수 브릿지 배치 참고'},
  {id:'ckline',kind:'container',category:'cargo',name:'천경해운 참고형',en:'Sky Coast',type:'동아시아 피더 컨테이너선 · 비공식 창작선',length:60,beam:9.4,mass:3.8,maxSpeed:18,accel:.85,turn:.24,draft:6.5,color:0x263f52,cargo:'근해 컨테이너 운송',reward:4400,bridgeY:10,bridgeZ:.34,deck:3.2,brand:'CK LINE',features:['천경해운 참고 도장','컴팩트한 선미 거주구','피더 컨테이너 갑판'],source:'https://www.ckline.com/en/service/ship/?svslcod=SKH1',reference:'SKY HOPE의 선종·선체 비례 참고'},
 ];
+// Game cruise speed: keep the lower lever range precise; open water gets more pace.
+for(const ship of ships){ship.referenceSpeed=ship.maxSpeed;ship.maxSpeed=Math.round(ship.maxSpeed*1.35);}
 export const regions = [
  {id:'five',name:'서해 5도',en:'West Sea Islands',label:'백령도 앞바다',lat:37.96,lon:124.68,color:0x176777,seed:12,wave:0.9,depth:35,wind:7.2,ports:['백령도','대청도','소청도','연평도','소연평도'],desc:'다섯 섬 사이, 느리게 흐르는 시간',layout:'islands'},
  {id:'west',name:'서해',en:'West Sea',label:'태안 · 안면도',lat:36.55,lon:126.24,color:0x1f727a,seed:34,wave:0.65,depth:26,wind:5.4,ports:['태안항','안면도','군산항'],desc:'낮은 섬과 금빛 노을의 바다',layout:'islands'},

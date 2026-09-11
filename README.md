@@ -108,3 +108,7 @@ GitHub Pages의 source를 GitHub Actions로 지정합니다. `main` 푸시 시 `
 - NPC 시간은 플레이/시간 배속과 함께 전진하고 메뉴·정지 상태에서는 멈춤.
 
 검증: `npm test`, `node tests/living-sea-check.mjs`, `node tests/helm-check.mjs`, `node tests/voyage-check.mjs`.
+
+### v1.6 항해 속도감
+
+게임 최고 속력을 기존 대비 약 35% 높이고 가속 반응을 약 2.1배로 조정했다. 레버 30% 이하·후진은 기존 목표 속도를 유지하여 접안을 돕는다. 최고 속력은 실제 선박 제원과 구분되는 게임 설정이다. 속력에 따라 3인칭 시야가 최대 7도 넓어지고 카메라가 조금 낮아지며 선수 앞을 바라본다. 선수 물보라·항적과 기관 회전음·풍절음도 속력에 반응한다.

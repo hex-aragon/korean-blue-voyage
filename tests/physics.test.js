@@ -9,3 +9,6 @@ test('운송 정산은 목적지와 저속 조건을 모두 요구한다',()=>{c
 test('해안 충돌과 강의 양안을 통과하지 않는다',()=>{let s=createVessel();s.x=290;assert(applyBoundary(s,regions[4],[]));assert.equal(s.x,285);s={...createVessel(),x:20,z:0,speed:4};assert(applyBoundary(s,regions[0],[{x:0,z:0,radius:30}]));assert(s.x>40);assert(s.speed<0);});
 test('파도는 시간과 풍속에 따라 변한다',()=>{assert.equal(waveHeight(0,0,0,0),0);assert.notEqual(waveHeight(10,10,1),waveHeight(10,10,2));});
 test('입력 프레임이 길어져도 물리는 제한된 시간만 전진한다',()=>{const a=createVessel(),b=createVessel();a.throttle=b.throttle=1;stepVessel(a,ships[0],env,10,{steer:1});stepVessel(b,ships[0],env,.05,{steer:1});assert.deepEqual(a,b);});
+
+test('출항 5초 안에 컨테이너선이 15노트 이상으로 가속한다',()=>{const ship=ships.find(s=>s.id==='container'),s=createVessel();s.throttle=1;for(let i=0;i<100;i++)stepVessel(s,ship,{wind:0,river:false,loadFactor:1},.05,{});assert(s.speed/.5144>15);assert(s.distance>25);});
+test('접안 레버 영역의 속도는 기존 저속 범위를 유지한다',()=>{const ship=ships.find(s=>s.id==='container'),s=createVessel();s.throttle=.1;for(let i=0;i<2000;i++)stepVessel(s,ship,{wind:0,river:false,loadFactor:1},.05,{});assert(Math.abs(s.speed/.5144-2.2)<.01);s.throttle=0;for(let i=0;i<200;i++)stepVessel(s,ship,{wind:0,river:false,loadFactor:1},.05,{});assert(s.speed<.1);});

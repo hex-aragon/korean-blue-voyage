@@ -5,3 +5,5 @@ test('어선과 상선은 지정 수역을 왕복하고 고래는 잠수한다',
 test('선박 교차 접근을 예측하고 먼 배는 경고하지 않는다',()=>{const s={x:0,z:0,heading:0,speed:5};const w={contacts:[{x:100,z:-100,heading:-Math.PI/2,speed:5,radius:20}],hazards:[]};assert(trafficAdvisory(w,s).danger);w.contacts[0].x=1000;assert.equal(trafficAdvisory(w,s),null);});
 test('그물 접촉과 강의 생태 구분을 적용한다',()=>{const w=createTraffic({layout:'harbor'}),h=w.hazards[0];assert(trafficAdvisory(w,{x:h.x,z:h.z,heading:0,speed:0}).collision);assert.equal(createTraffic({layout:'river'}).contacts.length,0);});
 test('부두를 가로지르는 NPC 항로를 제외한다',()=>{const w=createTraffic({layout:'harbor'},[{x:-650,z:-1000,radius:400}]);assert(w.contacts.filter(c=>c.kind!=='whale').length<4);});
+
+test('고래는 정지한 선박을 향해 계속 들어오지 않는다',()=>{const w=createTraffic({layout:'harbor'}),own={x:-346,z:-2366,anchored:false,speed:0};for(let i=0;i<10000;i++){stepTraffic(w,.05,own);for(const c of w.contacts.filter(c=>c.kind==='whale'))assert(Math.hypot(c.x-own.x,c.z-own.z)>c.radius+10);}});
