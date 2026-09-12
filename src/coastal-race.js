@@ -1,0 +1,5 @@
+import {makeCourse} from './leisure.js';
+export const COASTS=[{id:'incheon',sea:'서해',name:'인천 해안'},{id:'busan',sea:'남해',name:'부산 해안'},{id:'donghae',sea:'동해',name:'동해·묵호 해안'}];
+// Keep the complete track seaward of the quays, rather than relocating offshore.
+export function coastalStart(blocked){for(const x of [-650,-850,-1050])for(const z of [-600,-1100]){const center={x,z},gates=makeCourse(center);let clear=true;for(let i=1;i<gates.length;i++){const a=gates[i-1],b=gates[i],length=Math.hypot(b.x-a.x,b.z-a.z);for(let j=0;j<=Math.ceil(length/10);j++){const u=j/Math.ceil(length/10);for(const side of [-40,0,40])if(blocked(a.x+(b.x-a.x)*u-(b.z-a.z)*side/length,a.z+(b.z-a.z)*u+(b.x-a.x)*side/length))clear=false;}}if(clear)return center;}return null;}
+export function mapProjection(points,w,h,padding=28){const xs=points.map(p=>p.x),zs=points.map(p=>p.z),minX=Math.min(...xs),maxX=Math.max(...xs),minZ=Math.min(...zs),maxZ=Math.max(...zs),scale=Math.min((w-padding*2)/Math.max(600,maxX-minX),(h-padding*2)/Math.max(600,maxZ-minZ)),cx=(minX+maxX)/2,cz=(minZ+maxZ)/2;return p=>[w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale];}

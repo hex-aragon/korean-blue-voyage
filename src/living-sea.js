@@ -1,8 +1,8 @@
+import {trafficModel} from './contact-geometry.js';
 import {immersedHeave} from './immersion.js';
 import {FoamWake} from './foam.js';
 import * as T from 'three';
 import {makeShip,disposeVessel} from './vessels.js';
-import {ships} from './data.js';
 import {waveHeight} from './physics.js';
 const metal=color=>new T.MeshStandardMaterial({color,roughness:.48,metalness:.25});
 function mesh(group,geo,color,x=0,y=0,z=0){const m=new T.Mesh(geo,metal(color));m.position.set(x,y,z);m.userData.privateMaterial=true;group.add(m);return m;}
@@ -24,7 +24,7 @@ export class LivingSea{
  constructor(scene){this.scene=scene;this.wakes=new Map();this.group=new T.Group();scene.add(this.group);this.models=new Map();}
  setWorld(world){for(const w of this.wakes.values())w.foam.dispose();this.wakes.clear();disposeVessel(this.group);this.models.clear();this.syncContacts(world);this.addHazards(world);}
  syncContacts(world){const ids=new Set([...world.contacts,...world.hazards].map(c=>c.id));for(const [id,m] of this.models)if(!ids.has(id)){m.removeFromParent();disposeVessel(m);this.models.delete(id);this.wakes.get(id)?.foam.dispose();this.wakes.delete(id);}
- for(const c of world.contacts){if(this.models.has(c.id))continue;let m,spec;if(c.kind==='coastguard'){m=coastguardBoat();spec={length:30,beam:9};}else if(c.kind==='whale')m=whale();else if(c.kind==='shark')m=shark();else if(c.kind==='pilot'){m=pilotBoat();spec={length:26,beam:8};}else if(c.kind==='fishing'){m=fishingBoat();spec={length:26,beam:8};}else{const kind=c.modelKind||(c.kind==='towing'?'tug':c.kind==='cargo'?'container':c.kind);const source=ships.find(s=>s.kind===kind)||ships[1];m=makeShip(source,false);const scale=c.local?(c.kind==='cargo'?.85:c.kind==='ferry'?.65:.95):c.id.startsWith('outer-')?(['container','bulk','tanker','carcarrier'].includes(kind)?1.1:kind==='ferry'?.85:.9):kind==='container'||kind==='ferry'?.45:.9;m.scale.setScalar(scale);spec={...source,length:source.length*scale,beam:source.beam*scale,draft:source.draft*scale};}
+ for(const c of world.contacts){if(this.models.has(c.id))continue;let m,spec;if(c.kind==='coastguard'){m=coastguardBoat();spec={length:30,beam:9};}else if(c.kind==='whale')m=whale();else if(c.kind==='shark')m=shark();else if(c.kind==='pilot'){m=pilotBoat();spec={length:26,beam:8};}else if(c.kind==='fishing'){m=fishingBoat();spec={length:26,beam:8};}else{const model=trafficModel(c);m=makeShip(model.source,false);m.scale.setScalar(model.scale);spec=model.spec;}
  if(c.kind==='towing'){const assembly=new T.Group();assembly.add(m);m=assembly;line(m,[[0,2,13],[0,.7,55],[0,2,78]],0xd6b88b);box(m,0,1,95,17,5,38,0x394b50);box(m,0,4,95,16,1,37,0x8a8e7c);for(let i=0;i<4;i++)box(m,0,6,84+i*7,12,3,5,0x8b6d4b);for(const x of [-8.6,8.6])for(let z=81;z<112;z+=6)mesh(m,new T.TorusGeometry(1,.3,8,12),0x172d31,x,2,z);}
  if(c.status==='fishing'||c.status==='restricted'){const signals=new T.Group();m.add(signals);signals.position.set(0,14,0);if(c.status==='fishing'){for(const y of [0,1.5]){const cone=mesh(signals,new T.ConeGeometry(.7,1.5,12),0x121b20,0,y,0);cone.rotation.z=y===0?0:Math.PI;}}else{for(const y of [0,4])mesh(signals,new T.SphereGeometry(.65,12,8),0x121b20,0,y,0);mesh(signals,new T.OctahedronGeometry(.9),0x121b20,0,2,0);}const gear=new T.Group();m.add(gear);line(gear,[[0,9,8],[0,4,15],[0,-8,18]],0xe0c38e);mesh(gear,new T.CylinderGeometry(1,1.5,3,12),0xc99b51,0,-5,18);m.userData.gear=gear;}
  if(spec)this.wakes.set(c.id,{foam:new FoamWake(this.scene,{detail:'light'}),spec});this.models.set(c.id,m);this.group.add(m);}

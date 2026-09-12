@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {physicalTargets,stopAtHulls,trafficModel} from '../src/contact-geometry.js';
+const ski={length:3.6,beam:1.4};const world=(contacts=[],hazards=[])=>({contacts,hazards});
+function move(from,to,targets,spec=ski){const s={...to,heading:0,speed:25,throttle:1};return {hit:stopAtHulls(s,from,targets,spec),s};}
+test('cargo radar radius does not turn a clear parallel pass into contact',()=>{const c={id:'outer-1',kind:'cargo',radius:55,x:0,z:0,heading:0};assert.equal(move({x:10,z:80},{x:10,z:-80},physicalTargets(world([c]))).hit,null);});
+test('actual hull contact stops a fast crossing before penetration',()=>{const c={id:'f1',kind:'fishing',radius:17,x:0,z:0};const r=move({x:-50,z:0},{x:50,z:0},physicalTargets(world([c])));assert.ok(r.hit);assert.ok(r.s.x<0);assert.equal(r.s.speed,0);assert.equal(r.s.throttle,0);});
+test('rotated ship uses heading and length rather than a safety circle',()=>{const c={id:'f',kind:'fishing',x:0,z:0,heading:Math.PI/2};assert.ok(move({x:8,z:20},{x:8,z:-20},physicalTargets(world([c]))).hit);assert.equal(move({x:20,z:20},{x:20,z:-20},physicalTargets(world([c]))).hit,null);});
+test('workzone interior is advisory water; its visible buoy is solid',()=>{const targets=physicalTargets(world([],[{kind:'workzone',x:0,z:0,radius:85}]));assert.equal(move({x:0,z:20},{x:0,z:-20},targets).hit,null);assert.ok(move({x:85,z:10},{x:85,z:-10},targets).hit);});
+test('net has a thin line footprint, not an invisible 70m disk',()=>{const targets=physicalTargets(world([],[{kind:'net',x:0,z:0,radius:70}]));assert.equal(move({x:-30,z:10},{x:30,z:10},targets).hit,null);assert.ok(move({x:0,z:20},{x:0,z:-20},targets).hit);});
+test('towline remains narrow and barge still blocks the route',()=>{const targets=physicalTargets(world([{id:'t',kind:'towing',x:0,z:0,heading:0}]));assert.equal(move({x:10,z:30},{x:10,z:70},targets).hit,null);assert.ok(move({x:-20,z:50},{x:20,z:50},targets).hit);assert.ok(move({x:0,z:120},{x:0,z:90},targets).hit);});
+test('submerged wildlife is not an invisible surface obstacle',()=>{assert.equal(physicalTargets(world([{kind:'whale',x:0,z:0,depth:-8}])).length,0);});
+test('resting overlap does not repeatedly signal a new collision and escape is allowed',()=>{const targets=physicalTargets(world([{id:'f',kind:'fishing',x:0,z:0}]));assert.equal(move({x:4,z:0},{x:4,z:0},targets).hit,null);assert.equal(move({x:4,z:0},{x:10,z:0},targets).hit,null);});
+test('NPC model and physics share scaled dimensions',()=>{const m=trafficModel({id:'local',kind:'cargo',local:true});assert.equal(m.spec.length,m.source.length*m.scale);assert.equal(m.spec.beam,m.source.beam*m.scale);});
+test('a moving vessel cannot sweep through a stationary craft between frames',()=>{const c={id:'f',kind:'fishing',x:30,z:0,heading:Math.PI/2,collisionFrom:{x:-30,z:0}};assert.ok(move({x:0,z:0},{x:0,z:0},physicalTargets(world([c]))).hit);});

@@ -1,3 +1,4 @@
+import {rectangle} from './contact-geometry.js';
 import * as T from 'three';
 import {harborPorts} from './harbor-data.js';
 // District silhouettes inspired by port plans; compact navigable geometry, not surveyed quays.
@@ -16,7 +17,7 @@ export function buildHarbor(region,land){
   box(x+66,3,z,3,8,300,0x919b94);box(x+70,7.2,z,10,.4,300,0xd1c6a0);
   for(let seam=-140;seam<=140;seam+=20)box(x+64.3,2,z+seam,.2,9,.28,0x4c5c5b);
   lift=3.5;box(x+290,4,z+119,410,.25,15,0x3f525a);for(let k=0;k<16;k++)box(x+88+k*25,4.2,z+119,12,.12,.5,0xdddac4);
-  for(const dx of [125,225,325,425])for(const dz of [-90,0,90])obstacles.push({x:x+dx,z:z+dz,radius:55,radarHidden:dx!==125||dz!==-90,...(dx===125&&dz===-90?{radarRect:{x:x+280,z,w:430,d:300}}:{})});
+  for(const dx of [125,225,325,425])for(const dz of [-90,0,90])obstacles.push({x:x+dx,z:z+dz,radius:55,advisoryOnly:true,radarHidden:dx!==125||dz!==-90,...(dx===125&&dz===-90?{radarRect:{x:x+280,z,w:430,d:300}}:{})});
   for(const dz of [-140,-100,-60,60,100,140]){cyl(x+69,4,z+dz,2.2,3,0xb9ab76);box(x+64,0,z+dz,2,5,12,0x263f45);}
   const profile=region.profile;
   if(profile==='industrial'){
@@ -36,12 +37,12 @@ export function buildHarbor(region,land){
  }
  lift=0;box(1080,-2,-950,700,18,2700,0x65745f);
  // Collision coverage for the added land; keep berth approaches open.
- for(const p of ports)for(let x=p.x+550;x<p.x+1250;x+=180)for(let z=p.z-180;z<=p.z+180;z+=180)obstacles.push({x,z,radius:115,radarHidden:x!==p.x+550||z!==p.z-180,...(x===p.x+550&&z===p.z-180?{radarRect:{x:p.x+760,z:p.z,w:1060,d:540}}:{})});
+ for(const p of ports)for(let x=p.x+550;x<p.x+1250;x+=180)for(let z=p.z-180;z<=p.z+180;z+=180)obstacles.push({x,z,radius:115,advisoryOnly:true,radarHidden:x!==p.x+550||z!==p.z-180,...(x===p.x+550&&z===p.z-180?{radarRect:{x:p.x+760,z:p.z,w:1060,d:540}}:{})});
  // Wide navigable entrance, marked by two lighted breakwaters.
- for(const side of [-1,1]){const x=side===1?520:-920;box(x,0,-2100,180,14,32,0x788984);for(let i=0;i<3;i++)obstacles.push({x:x-60+i*60,z:-2100,radius:27});cyl(x+(side===1?-90:90),14,-2100,4,16,side===1?0xede7d4:0xa86655);cyl(x+(side===1?-90:90),23,-2100,4,3,side===1?0x70b894:0xc87462);}
+ for(const side of [-1,1]){const x=side===1?520:-920;box(x,0,-2100,180,14,32,0x788984);obstacles.push({x,z:-2100,radius:90,physicalPolygon:rectangle({x,z:-2100},180,32)});cyl(x+(side===1?-90:90),14,-2100,4,16,side===1?0xede7d4:0xa86655);cyl(x+(side===1?-90:90),23,-2100,4,3,side===1?0x70b894:0xc87462);}
 
  // Surrounding terrain is rendered from bundled open elevation data.
- if(region.profile==='estuary'){for(let j=0;j<4;j++){const sand=new T.Mesh(new T.CylinderGeometry(370,400,3,40),new T.MeshStandardMaterial({color:0x99947a,roughness:1}));sand.scale.z=.6;sand.position.set(-1700-j*240,0,-600-j*550);sand.userData.privateMaterial=true;land.add(sand);obstacles.push({x:sand.position.x,z:sand.position.z,radius:380});}}
+ if(region.profile==='estuary'){for(let j=0;j<4;j++){const sand=new T.Mesh(new T.CylinderGeometry(370,400,3,40),new T.MeshStandardMaterial({color:0x99947a,roughness:1}));sand.scale.z=.6;sand.position.set(-1700-j*240,0,-600-j*550);sand.userData.privateMaterial=true;land.add(sand);obstacles.push({x:sand.position.x,z:sand.position.z,radius:380,physicalPolygon:Array.from({length:32},(_,i)=>({x:sand.position.x+380*Math.cos(i*Math.PI/16),z:sand.position.z+228*Math.sin(i*Math.PI/16)}))});}}
  if(region.profile==='channel'){hill(-1900,-700,650,160);for(const side of [-1,1]){box(side*1250,72,-1850,18,150,18,0xb6c4c4);beam([side*1250,145,-1850],[0,80,-1850],.7,0xb4c7c4);}box(0,76,-1850,2600,6,25,0x9fadb0);}
  for(const {geo,color,items} of batches.values()){const m=new T.MeshStandardMaterial({color,roughness:.78});const mesh=new T.InstancedMesh(geo,m,items.length),dummy=new T.Object3D();items.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.scale.set(p.w,p.h,p.d);dummy.rotation.set(0,p.angle,0);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});m.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 harborPosition;').replace('#include <project_vertex>','#include <project_vertex>\nharborPosition=(modelMatrix*instanceMatrix*vec4(position,1.0)).xyz;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 harborPosition;').replace('#include <color_fragment>',`#include <color_fragment>
  float grain=fract(sin(dot(floor(harborPosition*14.0),vec3(12.9898,78.233,37.719)))*43758.5453);
