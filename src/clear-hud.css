@@ -34,3 +34,8 @@ body.race-mode .helm{display:contents!important}body.race-mode .helm-reading{pos
 #welcome h1{font-family:'Noto Sans KR',sans-serif;font-weight:300;letter-spacing:-.065em}
 
 body #sail-toggle{position:fixed;left:18px;top:62px;z-index:5;padding:10px 14px;min-height:42px;border:1px solid #d9f3ec55;border-radius:22px;background:#07364bb3;backdrop-filter:blur(8px);font-size:12px;color:#edf8ef}body #sail-toggle[aria-pressed=true]{border-color:#9fe1d0;color:#bdf5df}
+
+#race-steering{display:none}body.race-mode #race-steering{display:contents}body.race-mode .wheel-station{display:none!important}
+#race-steering button{position:fixed;bottom:max(18px,env(safe-area-inset-bottom));z-index:6;width:82px;height:70px;border:1px solid #c8eee36b;border-radius:22px;background:#07364baa;backdrop-filter:blur(8px);color:#effdf5;display:flex;align-items:center;justify-content:center;gap:5px;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:background .1s,transform .1s}
+#race-left{left:18px}#race-right{right:18px}#race-steering span{font-size:26px;line-height:1}#race-steering small{font-size:10px}#race-steering button.held,#race-steering button:active{background:#57beaecf;color:#072c38;transform:scale(.94)}body.race-mode .engine-station{bottom:max(106px,calc(env(safe-area-inset-bottom) + 88px));right:26px}
+@media(max-width:700px){#race-left{left:12px}#race-right{right:12px}body.race-mode .engine-station{right:20px}}

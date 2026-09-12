@@ -6,7 +6,7 @@ export function createVessel(){return {x:0,z:100,speed:0,heading:0,rudder:0,thro
 export function stepVessel(s,ship,env,dt,input){
  dt=clamp(dt,0,0.05);
  s.throttle=clamp(s.throttle+(input.throttle||0)*dt*0.35,-0.3,1);
- s.rudder+=(clamp(input.steer||0,-1,1)-s.rudder)*Math.min(1,dt*2.2);
+ s.rudder+=(clamp(input.steer||0,-1,1)-s.rudder)*Math.min(1,dt*(input.quickSteer?10:2.2));
  if(ship.kind==='yacht')stepSail(s,dt);
  const lever=Math.abs(s.throttle),cruise=clamp((lever-.3)/.7,0,1),lowSpeedRatio=(ship.referenceSpeed||ship.maxSpeed)/ship.maxSpeed;
  const condition=s.throttle<0?Math.max(.45,1-(s.damage||0)*.006):Math.max(.12,1-(s.damage||0)*.009);
