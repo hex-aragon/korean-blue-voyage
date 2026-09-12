@@ -1,3 +1,6 @@
+import {updateSail} from './sail-mesh.js';
+import {immersedHeave} from './immersion.js';
+import {waveHeight} from './physics.js';
 import {populateEncounters} from './encounters.js';
 import {oceanGridAxis} from './hydrodynamics.js';
 import {harborGroundHeight} from './harbor-data.js';
@@ -74,6 +77,7 @@ export class OceanScene{
  }
  setTime(mode){this.timeMode=mode;this.scene.background=null;this.sky.visible=true;this.scene.environmentIntensity=mode==='night'?.08:.65;this.sky.material.uniforms.mood.value={day:0,sunset:1,night:2}[mode];const elevation={day:34,sunset:7,night:-5}[mode];this.sun.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elevation),THREE.MathUtils.degToRad(150));this.sky.material.uniforms.sunPosition.value.copy(this.sun);this.water.material.uniforms.sunDirection.value.copy(this.sun).normalize();this.light.position.copy(this.sun).multiplyScalar(500);this.light.intensity=mode==='night'?.25:2.5;this.renderer.toneMappingExposure=mode==='night'?.24:.72;this.scene.fog.color.set(mode==='night'?0x263f58:mode==='sunset'?0xb2b9b0:0x8dc6d3);}
  setWeather(w,s){
+ this.sailingWind=w.wind;this.sailingDirection=w.direction;
  const storm=w.storm||0,night=this.timeMode==='night';this.sky.material.uniforms.storm.value=storm;
  this.scene.background=null;this.sky.visible=true;
  this.scene.fog.density=.00010+storm*.00036;this.scene.fog.color.set(night?0x263f58:this.timeMode==='sunset'?0xb2b9b0:0x8dc6d3).lerp(new THREE.Color(0x637880),storm);
@@ -129,7 +133,7 @@ export class OceanScene{
  const ship=this.ship;if(!ship)return;
  const hull=ship.getObjectByName('hull-surface'),damage=s.damage||0;
  if(hull&&hull.userData.damage!==damage){const g=hull.geometry,p=g.attributes.position,c=g.attributes.color;hull.userData.originalPositions??=p.array.slice();hull.userData.originalColors??=c.array.slice();const base=hull.userData.originalPositions,colors=hull.userData.originalColors;for(let i=0;i<p.count;i++){const x=base[i*3],y=base[i*3+1],z=base[i*3+2],w=Math.exp(-(((z+this.spec.length*.14)/(this.spec.length*.075))**2))*Math.min(1,(Math.abs(x)/(this.spec.beam*.5))**4)*damage/100;p.setXYZ(i,x*(1-w*.28),y-w*.6,z);for(let j=0;j<3;j++)c.array[i*3+j]=colors[i*3+j]*(1-w*.88);}p.needsUpdate=c.needsUpdate=true;g.computeVertexNormals();hull.userData.damage=damage;}
- this.renderer.domElement.dataset.jumpHeight=(s.jumpHeight||0).toFixed(2);this.renderer.domElement.dataset.damage=damage.toFixed(1);this.renderer.domElement.dataset.model=ship.userData.blenderDetail?'blender':'procedural';this.foam.update(s,this.spec,t,strength);const h=(s.heave||0)+(s.jumpHeight||0);ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch-(s.jumpVelocity||0)*.025,-s.heading,-s.roll-(this.spec.kind==='jetski'?s.rudder*.16:0),'YXZ');const rider=ship.getObjectByName('sport-rider');if(rider){rider.rotation.z=-s.rudder*.12;rider.position.y=Math.sin(t*8)*Math.min(.035,Math.abs(s.speed)*.002);}
+ this.renderer.domElement.dataset.jumpHeight=(s.jumpHeight||0).toFixed(2);this.renderer.domElement.dataset.damage=damage.toFixed(1);this.renderer.domElement.dataset.model=ship.userData.blenderDetail?'blender':'procedural';s.heave=immersedHeave(s,this.spec,(x,z)=>waveHeight(x,z,t,strength));this.foam.update(s,this.spec,t,strength);updateSail(ship,this.spec,s,t,dt,this.sailingWind||0,this.sailingDirection??.9);this.renderer.domElement.dataset.sailArea=(s.sailArea||0).toFixed(2);const h=(s.heave||0)+(s.jumpHeight||0);ship.position.set(s.x,h,s.z);ship.rotation.set(s.pitch-(s.jumpVelocity||0)*.025,-s.heading,-s.roll-(this.spec.kind==='jetski'?s.rudder*.16:0),'YXZ');const rider=ship.getObjectByName('sport-rider');if(rider){rider.rotation.z=-s.rudder*.12;rider.position.y=Math.sin(t*8)*Math.min(.035,Math.abs(s.speed)*.002);}
  this.light.position.copy(this.sun).multiplyScalar(350).add(ship.position);this.light.target.position.copy(ship.position);updateVesselDetails(ship,this.spec,t,handling);
  this.syncCargo(cargo);updateBridge(this.bridge,s,stability(this.spec,cargo),t,{obstacles:this.obstacles,ports:this.ports,world:this.world,target:this.navTarget,route:this.navRoute});
  this.lift.visible=!!handling&&!['carcarrier','ferry','cruise','lng','tanker','chemical'].includes(this.spec.kind);if(handling){const p=handling.progress;this.lift.position.set(18*(1-p),6+Math.sin(p*Math.PI)*14,-this.spec.length*.15);}

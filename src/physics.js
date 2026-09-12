@@ -1,15 +1,17 @@
+import {sailDrive,stepSail} from './sailing.js';
 import {stopAtCircles,stopAtBoundary} from './collision.js';
 export const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 export function waveHeight(x,z,t,strength=1){return strength*(Math.sin(x*0.022+z*0.014-t*1.2)*0.72+Math.sin(x*0.051-z*0.027-t*1.7)*0.3+Math.sin(z*0.085+x*0.03-t*2.1)*0.12+Math.sin(x*.007+z*.010-t*.52)*.35);}
-export function createVessel(){return {x:0,z:100,speed:0,heading:0,rudder:0,throttle:0,anchored:false,distance:0,roll:0,pitch:0,rollVelocity:0,pitchVelocity:0,heave:0,heaveVelocity:0,waterlineOffset:0,capsized:false,damage:0};}
+export function createVessel(){return {x:0,z:100,speed:0,heading:0,rudder:0,throttle:0,anchored:false,distance:0,roll:0,pitch:0,rollVelocity:0,pitchVelocity:0,heave:0,heaveVelocity:0,sailArea:0,sailTarget:0,waterlineOffset:0,capsized:false,damage:0};}
 export function stepVessel(s,ship,env,dt,input){
  dt=clamp(dt,0,0.05);
  s.throttle=clamp(s.throttle+(input.throttle||0)*dt*0.35,-0.3,1);
  s.rudder+=(clamp(input.steer||0,-1,1)-s.rudder)*Math.min(1,dt*2.2);
- const windAssist=ship.id==='yacht'?Math.max(0,Math.cos(s.heading-(env.windDirection??.9)))*env.wind*0.035:0;
+ if(ship.kind==='yacht')stepSail(s,dt);
  const lever=Math.abs(s.throttle),cruise=clamp((lever-.3)/.7,0,1),lowSpeedRatio=(ship.referenceSpeed||ship.maxSpeed)/ship.maxSpeed;
  const condition=s.throttle<0?Math.max(.45,1-(s.damage||0)*.006):Math.max(.12,1-(s.damage||0)*.009);
- const target=s.anchored?0:condition*s.throttle*(ship.maxSpeed*0.5144)*(lowSpeedRatio+(1-lowSpeedRatio)*cruise*cruise*(3-2*cruise))*(1+windAssist);
+ let target=s.anchored?0:condition*s.throttle*(ship.maxSpeed*0.5144)*(lowSpeedRatio+(1-lowSpeedRatio)*cruise*cruise*(3-2*cruise));
+ if(ship.kind==='yacht'&&!s.anchored){const motor=s.throttle*2.1;target=condition*(s.throttle<0?motor:motor+((s.damage||0)>0?0:sailDrive(s,env).speed));}
  const response=s.anchored?1.6:ship.accel*(Math.abs(target)<Math.abs(s.speed)?.46:.38)/(env.loadFactor||1);
  s.speed+=(target-s.speed)*(1-Math.exp(-dt*response));
  s.heading+=s.rudder*ship.turn*clamp(s.speed/5,-0.4,1)*dt;

@@ -40,7 +40,7 @@ let trainingBook=restoreTrainingBook(saved.training),trainingFeedback='';
 let activity=null,leisureView,leisureBook=restoreLeisure(saved.leisure?.courseVersion===3?saved.leisure:{fish:saved.leisure?.fish});
 const audio=new SeaAudio(),weatherState=createWeather();
 $('#app').innerHTML=`
-<div id="ocean" aria-label="3D 항해 화면"></div><div class="vignette"></div>
+<button id="sail-toggle" class="hud" hidden aria-pressed="false">돛 펼치기</button><div id="ocean" aria-label="3D 항해 화면"></div><div class="vignette"></div>
 <header class="topbar hud"><a class="brand" href="#" aria-label="윤슬"><span>≋</span> 윤슬</a><div class="location"><span id="region-title"></span><small id="place-name"></small></div><div class="top-actions"><button id="instruments-toggle" aria-pressed="false" aria-label="상세 계기와 조타 표시">계기</button><button id="camera-toggle" aria-label="1인칭 브릿지로 전환">1인칭 브릿지</button><button id="menu" aria-label="항해 메뉴 열기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>메뉴</span></button></div></header>
 <div id="voyage-hint" class="hud"><small id="mission-stage"></small><span id="mission-status">출항 준비 완료</span><div class="mission-next"><span id="mission-nav"></span><button id="mission-action" hidden></button></div></div>
 <button id="weather-readout" class="hud" aria-label="날씨와 해상 상태 설정"></button><div id="sea-watch" class="hud" role="status" hidden></div><div id="watch-task" class="hud" hidden><span id="watch-task-text"></span><button id="watch-observe">표적 확인</button><button id="watch-details" aria-label="항해 실습 수첩 열기">수첩 ↗</button></div>${helmMarkup(officerPortrait)}
@@ -207,7 +207,7 @@ window.addEventListener('pagehide',save);setInterval(save,15000);
 function drawMap(){const canvas=$('#map');if(!canvas)return;const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,scale=.12;c.fillStyle='#123641';c.fillRect(0,0,w,h);c.strokeStyle='#8bbbad20';for(let x=0;x<w;x+=35){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}for(let y=0;y<h;y+=35){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}const project=p=>[w/2+(p.x-state.x)*scale,h*.65+(p.z-state.z)*scale];
  c.fillStyle='#416e65';for(const o of ocean?.obstacles||[]){const [x,y]=project(o);c.beginPath();c.ellipse(x,y,o.radius*scale,o.radius*scale*.8,0,0,Math.PI*2);c.fill();}if(region.layout==='river'){const left=w/2+(-310-state.x)*scale,right=w/2+(310-state.x)*scale;c.fillRect(0,0,left,h);c.fillRect(right,0,w-right,h);}
  if(mission){const [x,y]=project(jobTarget());c.setLineDash([5,6]);c.strokeStyle='#e7be7d';c.beginPath();c.moveTo(w/2,h*.65);c.lineTo(x,y);c.stroke();c.setLineDash([]);}for(const p of ports){const [x,y]=project(p);c.strokeStyle='#a9dcd1';c.beginPath();c.arc(x,y,6,0,Math.PI*2);c.stroke();c.font='16px sans-serif';c.fillStyle='#d1e1dc';c.fillText(p.name,x+12,y+5);}c.save();c.translate(w/2,h*.65);c.rotate(state.heading);c.beginPath();c.moveTo(0,-12);c.lineTo(8,9);c.lineTo(0,4);c.lineTo(-8,9);c.closePath();c.fillStyle='#f4d19a';c.fill();c.restore();c.fillStyle='#c3d7d5';c.font='17px sans-serif';c.fillText('N ↑',w-50,30);}
-function updateUI(){updateLeisureUI();$('#voyage-hint').hidden=gameMode==='free';
+function updateUI(){updateLeisureUI();const sailButton=$('#sail-toggle');sailButton.hidden=spec.kind!=='yacht'||!started||zen;sailButton.textContent=`${state.sailTarget?'돛 접기':'돛 펼치기'} · ${Math.round((state.sailArea||0)*100)}%`;sailButton.setAttribute('aria-pressed',String(!!state.sailTarget));$('#voyage-hint').hidden=gameMode==='free';
  const tr=trainingBook.run;$('#training-chip').hidden=!tr||zen;$('#training-chip').textContent=tr?`승선 실습 ${Math.min(6,tr.phase+1)}/6 · ${tr.status==='question'?'상황 판단':tr.status==='review'?'복습':TRAINING_STEPS[tr.phase]?.name||'완료'} ↗`:'';
  $('#damage-panel').classList.toggle('assisting',!!rescueCall);$('#damage-panel').hidden=!damageNotice||state.capsized;$('#damage-open').hidden=damageNotice||!state.damage||state.capsized;$('#damage-open').textContent=`선체 ${Math.round(100-(state.damage||0))}% · 수리`;
  $('#damage-title').textContent=state.damage?`선체 내구도 ${Math.round(100-state.damage)}%`:'수리 완료 · 항해 재개';$('#hull-health').value=100-(state.damage||0);
@@ -300,3 +300,5 @@ $('#instruments-toggle').onclick=()=>{const expanded=document.body.classList.tog
 $('#leisure-more').onclick=()=>{const expanded=$('#leisure-hud').classList.toggle('expanded');$('#leisure-more').setAttribute('aria-expanded',String(expanded));};
 
 import "./clear-hud.css";
+
+$('#sail-toggle').onclick=()=>{state.sailTarget=state.sailTarget?0:1;if(state.sailTarget&&state.anchored){state.anchored=false;syncAnchor();}save();toast(state.sailTarget?'돛을 펼칩니다 · 바람을 옆으로 받으면 힘을 얻고, 맞바람에서는 힘이 줄어요.':'돛을 접습니다 · 바람 추진력이 줄고 보조기관 레버로 이동할 수 있어요.');};

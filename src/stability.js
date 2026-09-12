@@ -1,3 +1,4 @@
+import {immersedHeave} from './immersion.js';
 import {clamp,waveHeight} from './physics.js';
 // Deliberately simplified teaching model; not a hydrostatic loading computer.
 export const BAY_NAMES=['선수 좌현','선수 우현','중앙 좌현','중앙 우현','선미 좌현','선미 우현'];
@@ -10,7 +11,7 @@ export function stability(ship,cargo){
  let mass=base+ballast,yMoment=base*ship.beam*.34+ballast*ship.beam*.045,xMoment=0,zMoment=0,freeSurface=0;
  cargo.bays.forEach((n,i)=>{const m=n*unit;mass+=m;const y=liquidShip(ship)?ship.beam*(.12+n*.1):ship.beam*(cargo.high?.98:.2);yMoment+=m*y;xMoment+=m*(i%2?1:-1)*ship.beam*.28;zMoment+=m*(Math.floor(i/2)-1)*ship.length*.23;if(liquidShip(ship)&&n>0&&n<3)freeSurface+=ship.beam*.035;});
  const kg=yMoment/mass,km=ship.beam*.55,correction=freeSurface*base/mass,gm=km-kg-correction,cgX=xMoment/mass,cgZ=zMoment/mass;
- const draft=ship.draft*(.55+.45*cargoUnits(cargo)/18+(cargo.ballast?.12:0));
+ const draft=ship.draft*(.7+.3*cargoUnits(cargo)/18+(cargo.ballast?.08:0));
  return {mass,kg,km,gm,cgX,cgZ,draft,freeSurface:correction,units:cargoUnits(cargo),list:gm>0?Math.atan2(cgX,gm):0,period:gm>0?2*Math.PI*(ship.beam*.38)/Math.sqrt(9.81*gm):Infinity,status:gm<=0?'복원력 상실':gm<ship.beam*.075?'복원력 부족':Math.abs(cgX/gm)>.15?'편중 적재':'안정'};
 }
 export function rightingLever(info,roll){return info.gm*Math.sin(roll)-info.cgX*Math.cos(roll);}
@@ -18,7 +19,7 @@ export function stepAttitude(s,ship,cargo,env,t,dt){
  dt=clamp(dt,0,.05);const info=stability(ship,cargo),B=ship.beam,L=ship.length;
  const sx=Math.cos(s.heading)*B*.5,sz=Math.sin(s.heading)*B*.5;
  const slope=(waveHeight(s.x+sx,s.z+sz,t,env.wave)-waveHeight(s.x-sx,s.z-sz,t,env.wave))/B;
- const windHeel=Math.sin((env.windDirection??.9)-s.heading)*(env.wind||0)**2*.000045;
+ const windHeel=Math.sin((env.windDirection??.9)-s.heading)*(env.wind||0)**2*.000045*(ship.kind==='yacht'?1+(s.sailArea||0)*2.5:1);
  const torque=windHeel-slope*B*.65+s.rudder*s.speed*.06+(info.gm<=0?.015:0);
  s.rollVelocity+=(-9.81*rightingLever(info,s.roll)/(B*.38)**2+torque*.3-s.rollVelocity*.34)*dt;
  s.roll=clamp(s.roll+s.rollVelocity*dt,-1.1,1.1);
@@ -26,10 +27,11 @@ export function stepAttitude(s,ship,cargo,env,t,dt){
  const pitchTarget=(waveHeight(s.x+dx,s.z+dz,t,env.wave)-waveHeight(s.x-dx,s.z-dz,t,env.wave))/(L*.7)+info.cgZ/(L*.6);
  s.pitchVelocity+=((pitchTarget-s.pitch)*1.2-s.pitchVelocity*.7)*dt;s.pitch=clamp(s.pitch+s.pitchVelocity*dt,-.35,.35);
  const surface=waveHeight(s.x,s.z,t,env.wave)*.35+(waveHeight(s.x+dx,s.z+dz,t,env.wave)+waveHeight(s.x-dx,s.z-dz,t,env.wave))*.2+(waveHeight(s.x+sx,s.z+sz,t,env.wave)+waveHeight(s.x-sx,s.z-sz,t,env.wave))*.125;
- s.waterlineOffset=(info.draft-ship.draft*.55)*.18;
+ s.waterlineOffset=info.draft-ship.draft*.7;
  const heaveTarget=surface-s.waterlineOffset,omega=clamp(2.2*(17/L)**.28*(ship.mass*100/info.mass)**.2,.8,2.6);
  s.heaveVelocity=clamp((s.heaveVelocity||0)+((heaveTarget-s.heave)*omega*omega-1.6*omega*(s.heaveVelocity||0))*dt,-6,6);
  s.heave+=s.heaveVelocity*dt;
+ const immersed=immersedHeave(s,ship,(x,z)=>waveHeight(x,z,t,env.wave));if(immersed<s.heave){s.heave=immersed;s.heaveVelocity=Math.min(0,s.heaveVelocity);}
  if(Math.abs(s.roll)>.95){s.capsized=true;s.throttle=0;s.speed*=Math.exp(-dt*2);}
  return info;
 }

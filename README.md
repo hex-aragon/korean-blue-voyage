@@ -4,6 +4,14 @@
 
 [플레이](https://hex-aragon.github.io/korean-blue-voyage/)
 
+## 1.17.2 — 요트 세일링과 수중 선체
+
+- 요트 왼쪽 위 `돛 펼치기 / 돛 접기` 버튼. 천이 펼쳐지고 접히며 바람에 부풀고 끝자락이 떨립니다. 상태는 항해 저장에 포함됩니다.
+- 풍향·풍속·전개 면적에 따라 돛 추진력이 달라집니다. 무풍·정면 맞바람에서는 돛 추진이 없고, 돛을 접어도 레버로 보조기관·후진을 쓸 수 있습니다. 손상 상태에서는 돛 추진도 차단합니다.
+- 선종별 흘수에 맞춘 용골·프로펠러·타 위치와 실제 적재 흘수 변화. 파도 높이와 자세를 반영해 프로펠러 둘레의 잠김을 보정하며, 주변 일반 선박에도 적용합니다. 수상오토바이의 의도적인 점프는 유지합니다.
+- 게임용 단순화 모델입니다. [RYA 항해 방향과 돛 조절](https://www.rya.org.uk/training/do-you-know-your-points-of-sail/), [RYA 세일 트림](https://www.rya.org.uk/products/rya-sail-trim-handbook/), [Wärtsilä 선박 기술 백과](https://www.wartsila.com/docs/default-source/marine-documents/encyclopedia/wartsila-o-marine-encyclopedia.pdf)를 참고했습니다.
+- 회귀 테스트 101개: 돛 전개·감속, 무풍·맞바람, 천 변형, 흘수·적재·파도 속 프로펠러 잠김 및 기존 기능.
+
 ## 1.17.1 — 홈 복귀와 충돌 정지
 
 - 레이싱·낚시의 `홈` 버튼으로 활동을 종료하고 시작 화면으로 돌아갑니다.
