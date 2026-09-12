@@ -1,3 +1,4 @@
+import {stepJetSkiWater} from './jetski-water.js';
 import {immersedHeave} from './immersion.js';
 import {clamp,waveHeight} from './physics.js';
 // Deliberately simplified teaching model; not a hydrostatic loading computer.
@@ -16,7 +17,7 @@ export function stability(ship,cargo){
 }
 export function rightingLever(info,roll){return info.gm*Math.sin(roll)-info.cgX*Math.cos(roll);}
 export function stepAttitude(s,ship,cargo,env,t,dt){
- dt=clamp(dt,0,.05);const info=stability(ship,cargo),B=ship.beam,L=ship.length;
+ dt=clamp(dt,0,.05);const info=stability(ship,cargo),B=ship.beam,L=ship.length;if(ship.kind==='jetski'){stepJetSkiWater(s,ship,t,env.wave,dt);return info;}
  const sx=Math.cos(s.heading)*B*.5,sz=Math.sin(s.heading)*B*.5;
  const slope=(waveHeight(s.x+sx,s.z+sz,t,env.wave)-waveHeight(s.x-sx,s.z-sz,t,env.wave))/B;
  const windHeel=Math.sin((env.windDirection??.9)-s.heading)*(env.wind||0)**2*.000045*(ship.kind==='yacht'?1+(s.sailArea||0)*2.5:1);

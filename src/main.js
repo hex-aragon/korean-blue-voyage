@@ -1,3 +1,4 @@
+import {SOUND_SIGNALS} from './sound-signals.js';
 import {bindRaceSteering} from './race-controls.js';
 import {stopAtCircles,stopAtBoundary} from './collision.js';
 import {stepRaceFeatures,resolveRaceCollision} from './race-course.js';
@@ -42,8 +43,8 @@ let activity=null,leisureView,leisureBook=restoreLeisure(saved.leisure?.courseVe
 const audio=new SeaAudio(),weatherState=createWeather();
 $('#app').innerHTML=`
 <button id="sail-toggle" class="hud" hidden aria-pressed="false">돛 펼치기</button><div id="ocean" aria-label="3D 항해 화면"></div><div class="vignette"></div>
-<header class="topbar hud"><a class="brand" href="#" aria-label="윤슬"><span>≋</span> 윤슬</a><div class="location"><span id="region-title"></span><small id="place-name"></small></div><div class="top-actions"><button id="instruments-toggle" aria-pressed="false" aria-label="상세 계기와 조타 표시">계기</button><button id="camera-toggle" aria-label="1인칭 브릿지로 전환">1인칭 브릿지</button><button id="menu" aria-label="항해 메뉴 열기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>메뉴</span></button></div></header>
-<div id="voyage-hint" class="hud"><small id="mission-stage"></small><span id="mission-status">출항 준비 완료</span><div class="mission-next"><span id="mission-nav"></span><button id="mission-action" hidden></button></div></div>
+<header class="topbar hud"><a class="brand" href="#" aria-label="윤슬"><span>≋</span> 윤슬</a><div class="location"><span id="region-title"></span><small id="place-name"></small></div><div class="top-actions"><button id="signal-toggle" aria-label="고동과 VHF 소리" aria-expanded="false" aria-controls="signal-panel">♪</button><button id="instruments-toggle" aria-pressed="false" aria-label="상세 계기와 조타 표시">계기</button><button id="camera-toggle" aria-label="1인칭 브릿지로 전환">1인칭 브릿지</button><button id="menu" aria-label="항해 메뉴 열기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>메뉴</span></button></div></header>
+<section id="signal-panel" hidden aria-label="고동과 VHF 소리"><div class="signal-heading"><strong>바다 소리</strong><button id="signal-close" aria-label="소리 메뉴 닫기">×</button></div><div class="signal-options">${Object.entries(SOUND_SIGNALS).map(([id,cue])=>`<button data-signal="${id}">${cue.name}</button>`).join('')}</div><div class="signal-footer"><span id="signal-status" role="status">눌러서 바로 듣기</span><button id="signal-stop">정지</button></div></section><div id="voyage-hint" class="hud"><small id="mission-stage"></small><span id="mission-status">출항 준비 완료</span><div class="mission-next"><span id="mission-nav"></span><button id="mission-action" hidden></button></div></div>
 <button id="weather-readout" class="hud" aria-label="날씨와 해상 상태 설정"></button><div id="sea-watch" class="hud" role="status" hidden></div><div id="watch-task" class="hud" hidden><span id="watch-task-text"></span><button id="watch-observe">표적 확인</button><button id="watch-details" aria-label="항해 실습 수첩 열기">수첩 ↗</button></div>${helmMarkup(officerPortrait)}
 <div class="keyboard-hint hud">W / S 레버 &nbsp; A / D 조타 &nbsp; C 시점 &nbsp; Space 출항·정박 <button id="time-speed">항해 3×</button><button id="pause">일시정지</button></div>
 <button id="training-chip" class="hud" hidden aria-label="승선 실습 항차 열기"></button><button id="exit-zen" hidden>항해 화면으로</button><div id="toast" role="status"></div>
@@ -194,7 +195,7 @@ function toggleAnchor(){if(activity?.type==='race'&&activity.run.phase!=='racing
 function togglePause(){paused=!paused;$('#pause').textContent=paused?'항해 계속':'일시정지';}
 function cycleSpeed(){if(activity)return toast('낚시와 레이싱은 실시간으로 진행됩니다.');simSpeed=simSpeed===3?8:simSpeed===8?20:simSpeed===20?1:3;$('#time-speed').textContent='항해 '+simSpeed+'×';$('#pace-toggle').textContent=simSpeed+'× 항해';}
 function toggleZen(){zen=!zen;document.body.classList.toggle('zen',zen);$('#exit-zen').hidden=!zen;}
-async function blowHorn(){try{const played=await audio.soundHorn(spec.length);if(played)toast('고동 —');else if(!audio.active)toast('메뉴에서 소리를 켜면 고동을 울릴 수 있어요.');}catch{toast('오디오를 시작할 수 없습니다.');}}
+async function blowHorn(){try{await audio.playSignal('long',spec.length);}catch{toast('오디오를 시작할 수 없습니다.');}}
 $('#horn').onclick=blowHorn;
 async function toggleSound(){try{await audio.toggle();if($('#panel').open)renderPanel();}catch{toast('오디오를 시작할 수 없습니다.');}}
 document.querySelectorAll('[data-start-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.startMode));syncWelcomeModes();
@@ -204,7 +205,7 @@ $('#officer').onclick=()=>openPanel('menu');$('#menu').onclick=()=>openPanel('me
 $('#camera-toggle').onclick=()=>setCamera(1-ocean.cameraMode);$('#motion-readout').onclick=()=>openPanel('cargo');$('#anchor').onclick=toggleAnchor;$('#autopilot').onclick=()=>setAuto(!autopilot);$('#exit-zen').onclick=toggleZen;
 $('#throttle').oninput=e=>{const value=Number(e.target.value);commandThrottle(Math.abs(value)<4?0:value/100);};$('#pause').onclick=togglePause;$('#time-speed').onclick=cycleSpeed;$('#pace-toggle').onclick=cycleSpeed;
 $('#recover').onclick=()=>{reset();paused=false;$('#pause').textContent='일시정지';toast('항구로 돌아왔습니다. 화물을 낮고 고르게 배치해 보세요.');};
-window.addEventListener('keydown',e=>{if(!started||e.target.matches('input,textarea,select,[contenteditable=true],[role=slider]')||$('#panel').open)return;const k=e.key.toLowerCase();if(['w','a','s','d',' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();keys[k]=true;if((k==='w'||k==='arrowup')&&paused)commandThrottle(Math.max(.35,state.throttle));if(e.repeat)return;if(k===' ')toggleAnchor();if(k==='p')setAuto(!autopilot);if(k==='f')blowHorn();if(k==='h')toggleZen();if(k==='c')setCamera(1-ocean.cameraMode);if(k==='escape'&&zen)toggleZen();});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);window.addEventListener('blur',()=>keys={});
+window.addEventListener('keydown',e=>{if(e.target.closest('#signal-panel,#signal-toggle'))return;if(!started||e.target.matches('input,textarea,select,[contenteditable=true],[role=slider]')||$('#panel').open)return;const k=e.key.toLowerCase();if(['w','a','s','d',' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();keys[k]=true;if((k==='w'||k==='arrowup')&&paused)commandThrottle(Math.max(.35,state.throttle));if(e.repeat)return;if(k===' ')toggleAnchor();if(k==='p')setAuto(!autopilot);if(k==='f')blowHorn();if(k==='h')toggleZen();if(k==='c')setCamera(1-ocean.cameraMode);if(k==='escape'&&zen)toggleZen();});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);window.addEventListener('blur',()=>keys={});
 window.addEventListener('pagehide',save);setInterval(save,15000);
 function drawMap(){const canvas=$('#map');if(!canvas)return;const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,scale=.12;c.fillStyle='#123641';c.fillRect(0,0,w,h);c.strokeStyle='#8bbbad20';for(let x=0;x<w;x+=35){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}for(let y=0;y<h;y+=35){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}const project=p=>[w/2+(p.x-state.x)*scale,h*.65+(p.z-state.z)*scale];
  c.fillStyle='#416e65';for(const o of ocean?.obstacles||[]){const [x,y]=project(o);c.beginPath();c.ellipse(x,y,o.radius*scale,o.radius*scale*.8,0,0,Math.PI*2);c.fill();}if(region.layout==='river'){const left=w/2+(-310-state.x)*scale,right=w/2+(310-state.x)*scale;c.fillRect(0,0,left,h);c.fillRect(right,0,w-right,h);}
@@ -306,3 +307,11 @@ import "./clear-hud.css";
 $('#sail-toggle').onclick=()=>{state.sailTarget=state.sailTarget?0:1;if(state.sailTarget&&state.anchored){state.anchored=false;syncAnchor();}save();toast(state.sailTarget?'돛을 펼칩니다 · 바람을 옆으로 받으면 힘을 얻고, 맞바람에서는 힘이 줄어요.':'돛을 접습니다 · 바람 추진력이 줄고 보조기관 레버로 이동할 수 있어요.');};
 
 document.addEventListener('visibilitychange',()=>{if(document.hidden)keys={};});
+
+function closeSignals(){ $('#signal-panel').hidden=true;$('#signal-toggle').setAttribute('aria-expanded','false'); }
+$('#signal-toggle').onclick=()=>{const open=$('#signal-panel').hidden;$('#signal-panel').hidden=!open;$('#signal-toggle').setAttribute('aria-expanded',String(open));if(open)$('#signal-panel [data-signal]').focus();};
+$('#signal-close').onclick=()=>{closeSignals();$('#signal-toggle').focus();};
+$('#signal-stop').onclick=()=>{audio.stopSignals();$('#signal-status').textContent='재생 정지';};
+for(const b of document.querySelectorAll('[data-signal]'))b.onclick=async()=>{try{if(await audio.playSignal(b.dataset.signal,spec.length))$('#signal-status').textContent=SOUND_SIGNALS[b.dataset.signal].name+' 재생';}catch{$('#signal-status').textContent='소리를 시작할 수 없어요';}};
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#signal-panel,#signal-toggle'))closeSignals();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#signal-panel').hidden){closeSignals();$('#signal-toggle').focus();}});

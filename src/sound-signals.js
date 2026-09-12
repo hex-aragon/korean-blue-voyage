@@ -1,0 +1,2 @@
+export const SOUND_SIGNALS={short:{name:'짧은 고동',pulses:[1]},long:{name:'긴 고동',pulses:[4.5]},astern:{name:'단음 3회',pulses:[1,1,1]},attention:{name:'단음 5회',pulses:[1,1,1,1,1]},vhf:{name:'VHF 모의교신',radio:true},bell:{name:'선박 종',bell:true}};
+export function signalTimeline(id){const cue=SOUND_SIGNALS[id];if(!cue)return [];let at=0;return (cue.pulses||[]).map(duration=>{const p={at,duration};at+=duration+.45;return p;});}
