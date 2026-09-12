@@ -51,7 +51,7 @@ export function stepTraffic(world,dt,own=null){world.time+=dt;for(const c of wor
   const nextPhase=c.phase+c.direction*velocity*dt/tangent,nextHeading=Math.atan2(-Math.sin(nextPhase)*c.rx*c.direction,-Math.cos(nextPhase)*c.rz*c.direction);
   const ownDistance=own?(c.kind==='towing'?pointSegmentDistance(own,candidate,towEnd({...candidate,heading:nextHeading})):Math.hypot(candidate.x-own.x,candidate.z-own.z)):Infinity;
   const currentOwnDistance=own?(c.kind==='towing'?pointSegmentDistance(own,c,towEnd(c)):Math.hypot(c.x-own.x,c.z-own.z)):Infinity;
-  const blocked=!c.yielding&&own&&(own.assisted||Math.abs(own.speed||0)<.6)&&ownDistance<c.radius+(own.assisted?220:85)&&ownDistance<currentOwnDistance;
+  const blocked=!c.yielding&&own&&ownDistance<c.radius+(own.assisted?220:85)&&ownDistance<currentOwnDistance;
   const other=world.contacts.some(p=>p!==c&&!['whale','shark'].includes(p.kind)&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<c.radius+p.radius+15&&Math.hypot(candidate.x-p.x,candidate.z-p.z)<Math.hypot(c.x-p.x,c.z-p.z));
   // Break game courtesy deadlocks by moving astern along the already validated loop.
   // Bow heading is retained; this is not a COLREG manoeuvre model. Tows never use it.
