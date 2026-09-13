@@ -2,7 +2,7 @@ import {portLocations,regions} from './data.js';
 import {seaGate} from './harbor-data.js';
 export function makeMission(originRegion,destinationRegion,originIndex,destinationIndex,spec){
  const origin={...portLocations(originRegion)[originIndex]},destination=portLocations(destinationRegion)[destinationIndex];
- return {...destination,origin,originRegion:originRegion.id,destinationRegion:destinationRegion.id,destinationRegionName:destinationRegion.name,phase:'loading',reward:spec.reward+(originRegion.id===destinationRegion.id?Math.max(1,destinationIndex):destinationIndex+1)*500+(originRegion.id!==destinationRegion.id?3000:0),units:6};
+ return {...destination,origin,originRegion:originRegion.id,destinationRegion:destinationRegion.id,destinationRegionName:destinationRegion.name,phase:'loading',documentId:`YS-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`.toUpperCase(),reward:spec.reward+(originRegion.id===destinationRegion.id?Math.max(1,destinationIndex):destinationIndex+1)*500+(originRegion.id!==destinationRegion.id?3000:0),units:6};
 }
 export function localMission(region,state,spec,destinationIndex){const ports=portLocations(region);let nearest=0;ports.forEach((p,i)=>{if(Math.hypot(state.x-p.x,state.z-p.z)<Math.hypot(state.x-ports[nearest].x,state.z-ports[nearest].z))nearest=i;});const dest=destinationIndex??((nearest+1)%ports.length);return makeMission(region,region,nearest,dest===nearest?(nearest+1)%ports.length:dest,spec);}
 export function missionTarget(mission,region){if(!mission)return null;if(mission.phase==='loading')return mission.origin;if(mission.destinationRegion!==region.id)return {...seaGate(region),isGate:true,name:mission.destinationRegionName+'행 외해 출항 지점'};return mission;}
